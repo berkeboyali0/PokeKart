@@ -1,0 +1,12 @@
+# veri-cek.ps1 indirme önbelleği (yarıda kalan indirmeler için)
+data/cache/
+
+# işletim sistemi / editör
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+*.log
+
+# dışa aktarılmış kayıt dosyaları
+pokekart-kayit-*.json

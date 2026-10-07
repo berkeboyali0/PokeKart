@@ -1,0 +1,397 @@
+/* PokéKart - GPU gerektirmeyen hafif stiller (blur / backdrop-filter yok) */
+:root {
+  --bg: #0e1120;
+  --panel: #181d33;
+  --panel2: #212844;
+  --line: #2c3458;
+  --text: #e9ecf8;
+  --muted: #8f97b8;
+  --yellow: #ffcb05;
+  --blue: #3d7dca;
+  --red: #e3350d;
+  --green: #3fbf6f;
+  --gold: #f5c542;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
+  min-height: 100vh;
+}
+button, input, select { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+
+/* ---------- Üst bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 10px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.brand { font-size: 22px; font-weight: 800; letter-spacing: .5px; color: var(--yellow); display: flex; align-items: center; gap: 8px; }
+.ball {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid #111;
+  background: linear-gradient(#e3350d 0 45%, #111 45% 55%, #fff 55%);
+}
+.tabs { display: flex; gap: 4px; }
+.tabs button {
+  background: none; border: 0; padding: 8px 14px; border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 600;
+}
+.tabs button:hover { background: var(--panel2); color: var(--text); }
+.tabs button.active { background: var(--panel2); color: var(--yellow); }
+.hud { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pill { display: flex; align-items: center; gap: 6px; background: var(--panel2); padding: 6px 12px; border-radius: 99px; }
+.pill small { color: var(--muted); }
+.coin b { color: var(--yellow); font-size: 15px; }
+.coin-ico {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff6b0, #f5c542 45%, #b8860b);
+  border: 1px solid #8a6508;
+}
+.dexbar { width: 230px; }
+.dexbar-text { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.bar { position: relative; height: 8px; border-radius: 4px; background: #0a0d18; overflow: hidden; }
+.bar > div { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transition: width .4s; }
+.bar-owned { background: #3b5a9a; }
+.bar-master { background: linear-gradient(90deg, #f5c542, #ffe680); }
+
+main { padding: 16px 18px 60px; max-width: 1500px; margin: 0 auto; }
+.tab { display: none; }
+.tab.active { display: block; }
+
+/* ---------- Ortak ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 14px; cursor: pointer; font-weight: 600; white-space: nowrap;
+}
+.btn:hover { border-color: #4a5690; background: #283055; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--blue); border-color: #5b95dd; }
+.btn.primary:hover { background: #4a8ad6; }
+.btn.gold { background: var(--yellow); color: #222; border-color: #ffe066; }
+.btn.danger { border-color: #7a2a2a; color: #ff9b8a; }
+.btn.danger:hover { background: #3a1f24; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.toolbar input[type=search], .toolbar select {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; outline: none;
+}
+.toolbar input[type=search] { min-width: 220px; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--blue); }
+.check { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; max-width: 760px; }
+.panel h2 { font-size: 16px; margin: 18px 0 8px; color: var(--yellow); }
+.panel h2:first-child { margin-top: 0; }
+.bonus-row { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; min-height: 36px; }
+
+/* ---------- Set mağazası ---------- */
+.set-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.set-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.set-card:hover { border-color: #46518a; }
+.set-logo { height: 70px; display: flex; align-items: center; justify-content: center; }
+.set-logo img { max-height: 70px; max-width: 100%; object-fit: contain; }
+.set-name { font-weight: 700; font-size: 15px; }
+.set-meta { font-size: 12px; color: var(--muted); }
+.set-meta b { color: var(--gold); }
+.prog { height: 5px; background: #0a0d18; border-radius: 3px; overflow: hidden; }
+.prog > div { height: 100%; background: var(--green); }
+.set-btns { display: flex; gap: 6px; margin-top: auto; padding-top: 4px; }
+.set-btns .btn:first-child { flex: 1; }
+
+/* ---------- Pokédex ---------- */
+.legend { display: flex; gap: 8px; align-items: center; margin: -4px 0 12px; font-size: 12px; }
+.lg { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: 8px; }
+.lg0 { background: #20263f; } .lg1 { background: #2f5aa8; } .lg2 { background: var(--gold); }
+.dex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.dex-cell {
+  position: relative; background: var(--panel); border: 2px solid #20263f; border-radius: 10px;
+  padding: 6px 4px 6px; text-align: center; cursor: pointer;
+}
+.dex-cell:hover { border-color: #4a5690; }
+.dex-cell img { width: 80px; height: 80px; display: block; margin: 0 auto; image-rendering: auto; }
+.dex-cell.s0 img { filter: brightness(0); opacity: .35; }
+.dex-cell.s1 { border-color: #2f5aa8; }
+.dex-cell.s2 { border-color: var(--gold); background: #2a2715; }
+.dex-no { position: absolute; top: 4px; left: 6px; font-size: 11px; color: var(--muted); }
+.dex-cell.s2 .dex-no::after { content: " ★"; color: var(--gold); }
+.dex-name { display: block; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dex-val { display: block; font-size: 11px; color: var(--muted); }
+
+/* ---------- Kart ızgarası (koleksiyon / modal) ---------- */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.ccard { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ccard.unowned .cimg img { opacity: .3; filter: grayscale(1); }
+.ccard.is-best { border-color: var(--gold); }
+.cimg {
+  position: relative; aspect-ratio: 245 / 342; border-radius: 7px; overflow: hidden; cursor: zoom-in;
+  background: #0a0d18;
+}
+.cimg.noimg::before {
+  content: attr(data-name); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 8px; text-align: center; color: var(--muted); font-size: 12px;
+}
+.cimg img { position: relative; width: 100%; height: 100%; object-fit: cover; display: block; }
+.cimg img.broken { visibility: hidden; }
+.count { position: absolute; top: 12px; right: 12px; background: #000c; padding: 1px 7px; border-radius: 99px; font-weight: 700; font-size: 12px; }
+.best-tag { position: absolute; top: 12px; left: 12px; background: var(--gold); color: #222; padding: 1px 7px; border-radius: 99px; font-weight: 800; font-size: 11px; }
+.cname { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmeta { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crow { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.crow b { color: var(--yellow); }
+.crow .btn { padding: 3px 8px; font-size: 12px; }
+.coll-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; }
+.stat b { display: block; font-size: 20px; color: var(--yellow); }
+.stat span { font-size: 12px; color: var(--muted); }
+.pager { display: flex; justify-content: center; gap: 6px; margin-top: 16px; align-items: center; }
+
+/* ---------- Overlay / modal ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 50; background: rgba(5, 7, 15, .93);
+  display: flex; align-items: center; justify-content: center; overflow: auto;
+}
+#modal { align-items: flex-start; padding: 30px 16px; }
+.modal-box {
+  position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  width: min(1100px, 100%); padding: 20px 22px;
+}
+.close-x { position: absolute; top: 10px; right: 12px; background: none; border: 0; font-size: 26px; color: var(--muted); cursor: pointer; }
+.close-x:hover { color: var(--text); }
+.sp-head { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; }
+.sp-head img { width: 96px; height: 96px; }
+.sp-head h2 { margin: 0; font-size: 24px; }
+.chip { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; margin-top: 4px; }
+.chip.c0 { background: #2a2f48; color: var(--muted); }
+.chip.c1 { background: #2f5aa8; }
+.chip.c2 { background: var(--gold); color: #222; }
+.sp-best { display: flex; gap: 20px; background: var(--panel2); border-radius: 12px; padding: 14px; margin-bottom: 18px; align-items: center; flex-wrap: wrap; }
+.sp-best > .cimg { width: 180px; flex: none; }
+.sp-best h3 + p { margin-bottom: 12px; }
+.sp-best h3 { margin: 0 0 6px; color: var(--gold); }
+.sp-best p { margin: 3px 0; }
+
+/* ---------- Paket açma ---------- */
+#opening { flex-direction: column; padding: 20px; justify-content: safe center; }
+.open-title { font-size: 18px; font-weight: 700; margin-bottom: 18px; text-align: center; }
+.open-title small { display: block; color: var(--muted); font-weight: 400; font-size: 13px; }
+.pack-wrap { position: relative; width: 230px; height: 360px; cursor: pointer; }
+.pack-wrap:hover .pack { animation: shake .5s ease-in-out infinite; }
+.pack { position: absolute; inset: 0; }
+.pack-top, .pack-body {
+  position: absolute; left: 0; right: 0; border-radius: 10px;
+  background:
+    repeating-linear-gradient(115deg, rgba(255,255,255,.07) 0 12px, rgba(255,255,255,0) 12px 30px),
+    linear-gradient(160deg, hsl(var(--h) 75% 52%), hsl(calc(var(--h) + 50) 70% 28%));
+  border: 2px solid rgba(255,255,255,.25);
+  transition: transform .55s ease-in, opacity .55s ease-in;
+}
+.pack-top { top: 0; height: 46px; border-bottom: 2px dashed rgba(255,255,255,.5); border-radius: 10px 10px 2px 2px; }
+.pack-body { top: 46px; bottom: 0; border-radius: 2px 2px 10px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 14px; }
+.pack-body img { max-width: 90%; max-height: 110px; object-fit: contain; }
+.pack-body .ball { width: 70px; height: 70px; border-width: 4px; }
+.pack-name { font-weight: 800; text-align: center; text-shadow: 0 2px 3px #000; }
+.pack.torn .pack-top { transform: translate(60px, -160px) rotate(25deg); opacity: 0; }
+.pack.torn .pack-body { transform: translateY(160px); opacity: 0; }
+.open-hint { margin-top: 18px; color: var(--muted); }
+@keyframes shake { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+
+.reveal-grid {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 175px)); gap: 14px; justify-content: center;
+  width: 100%;
+}
+.card3d { position: relative; aspect-ratio: 245 / 342; perspective: 900px; cursor: pointer; }
+.card3d .inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .5s; }
+.card3d.flipped .inner { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; border-radius: 8px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.face.back {
+  background:
+    radial-gradient(circle at 50% 50%, #fff 0 9%, #222 9% 12%, transparent 12%),
+    linear-gradient(#e3350d 0 47%, #222 47% 53%, #f0f0f0 53%) center / 46% 33% no-repeat,
+    linear-gradient(135deg, #1d4f9e, #2a6ad1 50%, #173d7a);
+  border: 5px solid #f1c232;
+}
+.card3d:not(.flipped):hover .inner { transform: translateY(-6px); }
+.face.front { transform: rotateY(180deg); background: #0a0d18; }
+.face.front img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.badges { position: absolute; left: 0; right: 0; bottom: -10px; display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; z-index: 2; transition: opacity .3s .3s; pointer-events: none; }
+.card3d:not(.flipped) .badges { opacity: 0; transition: none; }
+.badge { padding: 1px 7px; border-radius: 99px; font-size: 10px; font-weight: 800; background: #000d; border: 1px solid #555; white-space: nowrap; }
+.badge.new { background: var(--green); border-color: #7be3a3; color: #04210f; }
+.badge.sp { background: var(--blue); border-color: #8fc0ff; }
+.badge.best { background: var(--gold); border-color: #fff1a8; color: #222; }
+.price-tag { position: absolute; top: -9px; right: -6px; z-index: 2; background: #000d; border: 1px solid #555; border-radius: 99px; padding: 0 7px; font-size: 11px; font-weight: 700; color: var(--yellow); }
+.card3d:not(.flipped) .price-tag { display: none; }
+
+/* değer seviyesine göre parlama */
+.card3d.flipped.g1 .front { box-shadow: 0 0 0 2px #5fa8ff; }
+.card3d.flipped.g2 .front { box-shadow: 0 0 0 3px #b06bff, 0 0 18px #b06bff; }
+.card3d.flipped.g3 .front { box-shadow: 0 0 0 3px var(--gold), 0 0 26px var(--gold); }
+.card3d.g4::before {
+  content: ""; position: absolute; inset: -5px; border-radius: 12px; opacity: 0;
+  background: linear-gradient(90deg, #ff4d4d, #ffcb05, #3fbf6f, #3d7dca, #b06bff, #ff4d4d);
+  background-size: 300% 100%;
+}
+.card3d.illus::before {
+  content: ""; position: absolute; inset: -5px; border-radius: 12px; opacity: 0;
+  background: linear-gradient(90deg, #ff6fb1, #b06bff, #5fa8ff, #6fffd8, #ff6fb1);
+  background-size: 300% 100%;
+}
+.card3d.flipped.illus::before, .card3d.flipped.g4::before { opacity: 1; animation: rainbow 2.5s linear infinite; }
+@keyframes rainbow { to { background-position: 300% 0; } }
+.card3d.burst::after {
+  content: ""; position: absolute; inset: -40%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,240,170,.9), rgba(255,200,40,0) 60%);
+  animation: burst .8s ease-out forwards;
+}
+@keyframes burst { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+
+/* deste */
+.stack-area { position: relative; width: min(290px, 70vw); aspect-ratio: 245 / 342; margin: 6px auto 0; cursor: pointer; }
+.stack-area .card3d { position: absolute; inset: 0; transition: transform .28s ease-out, opacity .28s ease-out; }
+.stack-area .card3d .inner { transition: transform .45s; }
+.stack-area .card3d.thrown { transform: translate(140%, -8%) rotate(18deg) !important; opacity: 0; }
+.stack-area .card3d.special .face.back { animation: specialGlow 1s ease-in-out infinite; }
+.stack-area .card3d.special.illus .face.back { animation-name: illusGlow; }
+@keyframes specialGlow { 50% { box-shadow: 0 0 0 3px var(--gold), 0 0 30px var(--gold); } }
+@keyframes illusGlow { 50% { box-shadow: 0 0 0 3px #ff6fb1, 0 0 34px #b06bff; } }
+.stack-area .badges { bottom: -14px; }
+.stack-area .badge { font-size: 12px; padding: 2px 9px; }
+.seen-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-height: 74px; margin-top: 26px; }
+.seen-row img { width: 52px; border-radius: 4px; animation: seenIn .25s ease-out; }
+.seen-row img.illus { box-shadow: 0 0 0 2px #b06bff; }
+.seen-row.small { gap: 4px; min-height: 50px; max-width: 760px; margin-left: auto; margin-right: auto; }
+.seen-row.small img { width: 34px; border-radius: 3px; }
+/* toplu açma: arkada üst üste paketler */
+.pack-wrap.multi::before, .pack-wrap.multi::after {
+  content: ""; position: absolute; inset: 0; border-radius: 10px;
+  background: linear-gradient(160deg, #3a4370, #1c2240); border: 2px solid rgba(255,255,255,.15);
+}
+.pack-wrap.multi::before { transform: translate(14px, -10px) rotate(4deg); }
+.pack-wrap.multi::after { transform: translate(7px, -5px) rotate(2deg); }
+.pack-wrap.multi .pack { z-index: 1; }
+@keyframes seenIn { from { transform: translateY(-14px); opacity: 0; } }
+
+.reveal-bar { margin-top: 28px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.reveal-sum { font-weight: 600; }
+.reveal-sum b { color: var(--yellow); }
+.god { color: var(--gold); font-weight: 800; font-size: 20px; margin-bottom: 8px; animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .5; } }
+
+.bulk-box { width: min(1200px, 100%); }
+.bulk-box .reveal-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+/* ---------- Büyük kart görünümü ---------- */
+#zoom { flex-direction: column; gap: 14px; cursor: zoom-out; perspective: 1200px; }
+.zoom-card { position: relative; height: min(78vh, 640px); aspect-ratio: 245 / 342; border-radius: 16px; overflow: hidden; transition: transform .1s; background: #0a0d18; }
+.zoom-card img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.zoom-card .shine { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.28), transparent 45%); }
+.zoom-info { text-align: center; }
+.zoom-info b { color: var(--yellow); }
+
+/* ---------- Bildirimler ---------- */
+#toasts { position: fixed; right: 16px; bottom: 16px; z-index: 100; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
+.toast { background: var(--panel2); border: 1px solid var(--line); border-left: 4px solid var(--blue); padding: 9px 14px; border-radius: 8px; max-width: 340px; animation: toastIn .25s ease-out; }
+.toast.gold { border-left-color: var(--gold); }
+.toast.err { border-left-color: var(--red); }
+@keyframes toastIn { from { transform: translateX(30px); opacity: 0; } }
+
+/* ---------- Illustration / hedef etiketleri ---------- */
+.tag-ir, .tag-best { display: inline-block; font-size: 10px; font-weight: 800; padding: 0 5px; border-radius: 4px; }
+.tag-ir { background: linear-gradient(90deg, #ff6fb1, #b06bff, #5fa8ff); color: #fff; }
+.tag-best { background: #3a3f5c; color: var(--yellow); }
+.dex-tag { position: absolute; top: 4px; right: 6px; }
+.badge.ir { background: linear-gradient(90deg, #ff6fb1, #b06bff, #5fa8ff); border-color: #ffd1f0; color: #fff; }
+.ccard.is-illus { border-color: #b06bff; }
+.ccard.is-target .best-tag { background: var(--gold); }
+.ir-tag { position: absolute; top: 12px; left: 12px; }
+.ccard .ir-tag + .best-tag, .ccard.is-target.is-illus .best-tag { left: 44px; }
+
+/* ---------- Pokébank ---------- */
+.bank-head { display: flex; gap: 20px; justify-content: space-between; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 20px; margin-bottom: 14px; }
+.bank-head h2 { margin: 0 0 4px; color: var(--yellow); }
+.bank-head p { margin: 4px 0; }
+.rules { margin: 4px 0; padding-left: 20px; }
+.bank-total { display: flex; flex-direction: column; gap: 8px; align-items: stretch; justify-content: center; }
+.crow .btn + .btn { margin-left: 4px; }
+.sell-btns { display: flex; gap: 4px; }
+
+/* ---------- İş ---------- */
+.pill-btn { border: 0; cursor: pointer; }
+.pill-btn:hover { background: #2c3560; }
+.pill-btn.full { box-shadow: 0 0 0 2px var(--gold); }
+.job-main { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; }
+.job-stage { width: 180px; height: 160px; border-radius: 12px; background: linear-gradient(#2a3a6a, #1a2140 70%, #2c4a2c 70%); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 18px; position: relative; overflow: hidden; }
+.job-sprite { max-width: 110px; max-height: 110px; image-rendering: pixelated; animation: bob 1.2s ease-in-out infinite; }
+.job-stage .coin-pop { position: absolute; top: 30px; color: var(--yellow); font-weight: 800; animation: coinPop 2s ease-out infinite; }
+@keyframes bob { 50% { transform: translateY(-8px); } }
+@keyframes coinPop { 0% { transform: translateY(20px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-20px); opacity: 0; } }
+.job-info { flex: 1; min-width: 260px; }
+.job-info h2 { margin: 0; color: var(--yellow); }
+.job-info p { margin: 4px 0 10px; }
+.job-row { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0; }
+.job-row div b { color: var(--yellow); font-size: 16px; }
+.kasa-bar { height: 12px; background: #0a0d18; border-radius: 6px; overflow: hidden; margin: 6px 0 12px; }
+.kasa-bar > div { height: 100%; background: linear-gradient(90deg, #f5c542, #ffe680); }
+.xp-bar { height: 6px; background: #0a0d18; border-radius: 3px; overflow: hidden; margin-top: 3px; width: 220px; }
+.xp-bar > div { height: 100%; background: var(--blue); }
+.job-list-title { margin: 24px 0 10px; }
+.job-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.job-card { display: flex; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.job-card.current { border-color: var(--gold); }
+.job-card.locked { opacity: .55; }
+.job-card img { width: 64px; height: 64px; flex: none; }
+.job-card .jn { font-weight: 700; }
+.job-card .jm { font-size: 12px; color: var(--muted); }
+.job-card .btn { margin-top: 6px; padding: 4px 10px; font-size: 12px; }
+
+/* ---------- Pokédex: bulunan Pokémon'da kart sergileme ---------- */
+.dex-grid { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
+.dex-art { aspect-ratio: 245 / 342; display: flex; align-items: center; justify-content: center; margin: 14px 2px 4px; border-radius: 6px; overflow: hidden; }
+.dex-cell .dex-art img { width: 80px; height: 80px; }
+.dex-cell.has-card .dex-art img { width: 100%; height: 100%; object-fit: cover; filter: none; opacity: 1; }
+.dex-cell.has-card .dex-art { background: #0a0d18; }
+.dex-cell.s2.has-card .dex-art { box-shadow: 0 0 0 2px var(--gold); }
+
+/* ---------- İş: mesai ---------- */
+.work-banner { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; background: #2a2715; border: 1px solid #6b5a1c; color: #ffe9a8; border-radius: 10px; padding: 10px 16px; margin-bottom: 14px; }
+.work-banner .btn { margin-left: auto; }
+.pill-btn.working { background: #3a3212; box-shadow: 0 0 0 1px #8a7020; }
+.btn.big { padding: 11px 22px; font-size: 16px; margin-top: 6px; }
+.job-sprite.idle { animation: none; filter: grayscale(.3); }
+
+/* ---------- İstatistik ---------- */
+#statsMain h3 { margin: 20px 0 10px; color: var(--yellow); }
+#statsMain h3:first-child { margin-top: 0; }
+.stat small { display: block; font-size: 11px; color: var(--muted); }
+.stats-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 14px; margin-top: 20px; }
+.stats-cols .panel { max-width: none; }
+.danger-zone { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 32px; padding: 14px 18px; border: 1px solid #7a2a2a; border-radius: 12px; background: #1f1418; }
+.set-rows { max-height: 420px; overflow: auto; padding-right: 6px; }
+.prow { display: grid; grid-template-columns: 150px 1fr 110px; gap: 10px; align-items: center; margin: 7px 0; font-size: 13px; }
+.prow .pl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow .prog { height: 8px; }
+.prow .pv { text-align: right; }
+.prow .pv small { color: var(--muted); }
+@media (max-width: 520px) { .stats-cols { grid-template-columns: 1fr; } .prow { grid-template-columns: 100px 1fr 90px; } }
+
+.nodata { max-width: 640px; margin: 80px auto; padding: 24px; background: var(--panel); border-radius: 12px; line-height: 1.6; }
+.nodata h1 { color: var(--yellow); margin-top: 0; }
+
+body.noanim *, body.noanim *::before, body.noanim *::after { animation: none !important; transition: none !important; }
+
+@media (max-width: 900px) {
+  .reveal-grid { grid-template-columns: repeat(3, minmax(0, 150px)); }
+  .hud { margin-left: 0; }
+}
+@media (max-width: 520px) {
+  .reveal-grid { grid-template-columns: repeat(2, minmax(0, 150px)); }
+  .toolbar input[type=search] { min-width: 0; flex: 1; }
+}
