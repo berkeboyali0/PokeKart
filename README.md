@@ -2,6 +2,8 @@
 
 Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oyunu. Amaç her Pokémon'un **illustration kartını** toplayarak Pokédex'i tamamlamak.
 
+> 💡 **Fikir:** Bu oyunun fikri tamamen [bamfies](https://www.youtube.com/@bamfies)'in YouTube içeriklerinden geliyor. Pokémon kart açılışlarını seviyorsan kanalına göz at: [youtube.com/@bamfies](https://www.youtube.com/@bamfies)
+
 - Gerçek setler ve gerçek kartlar: 1999'dan 2026'ya 167 set, 20.000'den fazla kart, 744 illustration kart
 - Kart değerleri gerçek piyasa fiyatlarından (Cardmarket / TCGplayer)
 - Saf HTML + JavaScript: sunucu, kurulum ya da ekran kartı gerekmez, zayıf ofis bilgisayarlarında bile çalışır
@@ -19,7 +21,7 @@ Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oy
 | ![Deste](docs/deste.png) | ![Pokédex](docs/pokedex.png) |
 | ![İş](docs/is.png) | ![İstatistik](docs/istatistik.png) |
 
-**Paket açma.** Her set ayrı bir paket. Paket yırtılınca kartlar deste olarak gelir ve en üstten tek tek açılır. Illustration kartlar ve değerli kartlar kapalı gelir, önce çevrilmeleri gerekir. 10'lu açmada 100 kartlık deste gelir; "Özel karta atla" butonu sıradan kartları geçer.
+**Paket açma.** Her set ayrı bir paket. Mağazada bir sete tıklayınca o setten çıkabilen eksik hedef kartlarını (Pokédex ve Trainer Destesi), toplanmış hedefleri ve istersen setin tüm kartlarını görürsün. Paket yırtılınca kartlar deste olarak gelir ve en üstten tek tek açılır. Illustration kartlar ve değerli kartlar kapalı gelir, önce çevrilmeleri gerekir. 10'lu açmada 100 kartlık deste gelir; "Özel karta atla" butonu sıradan kartları geçer.
 
 **Pokédex.** Hedef, her Pokémon'un Illustration Rare ya da Special Illustration Rare kartlarından birini bulmak. Illustration kartı olmayan Pokémon'larda hedef, o Pokémon'un en değerli kartı. Bulunan Pokémon'un hücresinde kartı sergilenir. Bir Pokémon'a tıklayınca hedef kartların hangi setlerde olduğu görünür.
 
@@ -32,6 +34,8 @@ Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oy
 **Ses efektleri.** Paket yırtma, kart kaydırma ve çevirme, özel kartlar için parıltı, illustration için zil, Special Illustration için fanfar, jeton ve seviye atlama sesleri. Sesler dosyadan çalınmaz, Web Audio API ile anlık üretilir. Ayarlar'dan ses seviyesi değiştirilebilir, üst bardaki 🔊 butonuyla tamamen kapatılabilir.
 
 **Trainer (profil).** Kullanıcı adını yazar, profil fotoğrafını seçersin. Fotoğraf yüklenmez; her nesilden 6 sevilen Pokémon'un hareketli görselinden (toplam 54) seçilir. Bir Pokémon'u Pokédex'te tamamlayınca onun shiny hali de açılır. Profilde Pokédex ilerlemesine göre bir unvan (Çaylak Antrenör'den Pokémon Ustası'na) görünür; istatistikler de bu sekmede, profilin altındadır.
+
+**Nasıl oynanır?** İlk açılışta yeni oyunculara 5 adımlık bir rehber gösterilir (amaç, paket açma, Pokédex, para kazanma, profil). Üst bardaki ❓ butonundan istediğin zaman tekrar açabilirsin.
 
 **İstatistikler (Trainer sekmesinde).** Açılan paket ve kart sayısı, toplanan illustration kartlar, nesillere ve setlere göre ilerleme, kazanç ve çalışma süresi, en değerli kartların. En altta kaydı sıfırlama butonu var.
 
@@ -66,4 +70,4 @@ Ekonomi (başlangıç jetonu, paket fiyatları, illustration çıkma oranları, 
 
 ## Not
 
-Kişisel, ticari olmayan bir hayran projesidir. Pokémon ve ilgili tüm isimler, görseller ve markalar Nintendo, Game Freak, Creatures Inc. ve The Pokémon Company'ye aittir. Bu proje onlarla bağlantılı değildir. Kart görselleri depoda tutulmaz, oyun çalışırken ilgili sunuculardan yüklenir.
+Kişisel, ticari olmayan bir hayran projesidir. Oyun fikri [bamfies](https://www.youtube.com/@bamfies)'in içeriklerinden ilham alınarak yapılmıştır. Pokémon ve ilgili tüm isimler, görseller ve markalar Nintendo, Game Freak, Creatures Inc. ve The Pokémon Company'ye aittir. Bu proje onlarla bağlantılı değildir. Kart görselleri depoda tutulmaz, oyun çalışırken ilgili sunuculardan yüklenir.

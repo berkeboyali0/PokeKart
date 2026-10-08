@@ -20,6 +20,7 @@
     <button data-tab="settings">Ayarlar</button>
   </nav>
   <div class="hud">
+    <button class="pill pill-btn" id="hudHelp" title="Nasıl oynanır?">❓</button>
     <button class="pill pill-btn hud-profile" id="hudProfile" title="Profil"><img id="hudAvatar" alt=""><b id="hudName"></b></button>
     <button class="pill pill-btn" id="hudMute" title="Sesi kapat">🔊</button>
     <button class="pill pill-btn" id="hudJob"><span>💼</span><b id="hudKasa">Boşta</b></button>
@@ -176,6 +177,9 @@
         <label class="btn">Kaydı içe aktar<input type="file" id="importFile" accept=".json" hidden></label>
         <button class="btn danger" id="resetBtn">Sıfırla</button>
       </div>
+      <h2>Hakkında</h2>
+      <p class="credit">💡 Oyunun fikri tamamen <a href="https://www.youtube.com/@bamfies" target="_blank" rel="noopener">bamfies</a>'in YouTube içeriklerinden geliyor. Pokémon kart açılışlarını sevdiysen kanalına göz at: <a href="https://www.youtube.com/@bamfies" target="_blank" rel="noopener">youtube.com/@bamfies</a></p>
+      <div class="btn-row"><button class="btn" id="helpBtn">❓ Nasıl oynanır?</button></div>
       <h2>Veri</h2>
       <div id="dataInfo" class="muted"></div>
       <p class="muted">Kart verilerini ve fiyatları güncellemek için oyun klasöründeki <b>veri-guncelle.bat</b> dosyasını çalıştırın. Kart verisi: pokemontcg.io, Pokémon isimleri/görselleri: PokeAPI.</p>
@@ -186,6 +190,7 @@
 <div id="opening" class="overlay hidden"></div>
 <div id="modal" class="overlay hidden"><div class="modal-box" id="modalBox"></div></div>
 <div id="zoom" class="overlay hidden"></div>
+<div id="intro" class="overlay hidden"><div class="intro-box" id="introBox"></div></div>
 <div id="toasts"></div>
 
 <script src="data/cards.js"></script>

@@ -717,7 +717,7 @@ function initShop() {
   ['shopSearch', 'shopSeries', 'shopSort', 'shopMissing'].forEach(id => $('#' + id).addEventListener('input', renderShop));
   $('#setGrid').addEventListener('click', e => {
     const b = e.target.closest('[data-open]');
-    if (!b) return;
+    if (!b) { const card = e.target.closest('.set-card'); if (card) openSetModal(SETS[+card.dataset.set]); return; }
     openPacks(SETS[+b.closest('.set-card').dataset.set], +b.dataset.open);
   });
 }
@@ -1052,6 +1052,55 @@ const modal = $('#modal');
 function closeModal() { modal.classList.add('hidden'); $('#modalBox').innerHTML = ''; }
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
+// Mağazada bir sete tıklayınca: o setten çıkabilen hedef kartlar (Pokédex + trainer destesi)
+let setModalAll = false, setModalId = null;
+function targetInfo(c) {
+  const out = [];
+  for (const n of c.dex) {
+    const sp = SPECIES[n];
+    if (sp && sp.targets && sp.targets.includes(c)) out.push({ kind: 'Pokédex', name: sp.name, done: isComplete(sp) });
+  }
+  if (c.trainer && c.trainer.targets.includes(c)) out.push({ kind: 'Trainer', name: c.trainer.name, done: isTrainerComplete(c.trainer) });
+  return out;
+}
+function openSetModal(set) {
+  if (setModalId !== set.id) { setModalAll = false; setModalId = set.id; }
+  const targets = set.cards.filter(c => isTargetCard(c)).sort((a, b) => b.value - a.value);
+  const missing = targets.filter(c => !own(c.id) && targetInfo(c).some(t => !t.done));
+  const doneT = targets.filter(c => !missing.includes(c));
+  const otherIllus = set.cards.filter(c => c.illus && !isTargetCard(c)).sort((a, b) => b.value - a.value);
+  const note = c => targetInfo(c).map(t => `${t.done ? '✓' : '★'} ${t.kind}: <b>${esc(t.name)}</b>`).join('<br>');
+  const card = c => miniCard(c, { showOne: true, meta: c.rarity, note: note(c) });
+  const have = set.cards.filter(c => own(c.id)).length;
+  const illus = set.cards.filter(c => c.illus);
+  const cost = packCost(set);
+  const byNum = (a, b) => a.num.localeCompare(b.num, undefined, { numeric: true });
+  $('#modalBox').innerHTML = `<button class="close-x" data-close>×</button>
+    <div class="set-head">
+      ${set.logo ? `<img src="${esc(set.logo)}" alt="">` : ''}
+      <div class="sh-info">
+        <h2>${esc(set.name)}</h2>
+        <div class="muted">${esc(set.series)} · ${set.date.slice(0, 4)} · ${set.cards.length} kart${set.estimated ? ' · tahmini fiyat' : ''}</div>
+        <div class="muted">${have}/${set.cards.length} kart sende${illus.length ? ` · ${illus.filter(c => own(c.id)).length}/${illus.length} illustration` : ''} · <b style="color:var(--gold)">${missing.length}</b> eksik hedef</div>
+        <div class="btn-row">
+          <button class="btn primary" data-openset="${set.i}" ${S.coins < cost ? 'disabled' : ''}>Aç · ${fmt(cost)}</button>
+          <button class="btn" data-openset="${set.i}" data-n="${CFG.BULK_COUNT}">x${CFG.BULK_COUNT} · ${fmt(cost * CFG.BULK_COUNT)}</button>
+        </div>
+      </div>
+    </div>
+    <h3>★ Eksik hedef kartlar (${missing.length})</h3>
+    <p class="muted" style="margin-top:-6px">Bu setten çıkabilen ve sende olmayan Pokédex / Trainer Destesi hedefleri.</p>
+    <div class="card-grid">${missing.map(card).join('') || '<p class="muted">Bu sette eksik hedef kart yok.</p>'}</div>
+    ${doneT.length ? `<h3>✓ Toplanmış hedefler (${doneT.length})</h3>
+      <p class="muted" style="margin-top:-6px">Sende olan ya da ilgili Pokémon / trainer başka bir kartla tamamlanmış hedefler.</p>
+      <div class="card-grid">${doneT.map(card).join('')}</div>` : ''}
+    ${otherIllus.length ? `<h3>Diğer illustration kartlar (${otherIllus.length})</h3>
+      <div class="card-grid">${otherIllus.map(c => miniCard(c, { showOne: true, meta: c.rarity })).join('')}</div>` : ''}
+    <div style="margin-top:18px"><button class="btn" data-showall="${set.i}">${setModalAll ? 'Tüm kartları gizle' : `Tüm kartları göster (${set.cards.length})`}</button></div>
+    ${setModalAll ? `<div class="card-grid" style="margin-top:12px">${set.cards.slice().sort(byNum).map(c => miniCard(c, { showOne: true, meta: `#${c.num} · ${c.rarity}` })).join('')}</div>` : ''}`;
+  if (modal.classList.contains('hidden')) { modal.classList.remove('hidden'); modal.scrollTop = 0; }
+}
+
 function miniCard(c, opts = {}) {
   const n = own(c.id), isT = isTargetCard(c);
   return `<div class="ccard ${n ? '' : 'unowned'} ${c.illus ? 'is-illus' : ''} ${isT ? 'is-target' : ''}" data-id="${esc(c.id)}">
@@ -1060,7 +1109,8 @@ function miniCard(c, opts = {}) {
     ${c.illus ? '<b class="tag-ir ir-tag">IR</b>' : ''}
     ${isT ? '<span class="best-tag">★</span>' : ''}
     <div class="cname" title="${esc(c.name)}">${esc(c.name)}</div>
-    <div class="cmeta" title="${esc(c.set.name)} · ${esc(c.rarity)}">${esc(c.set.name)} · ${esc(c.rarity)}</div>
+    <div class="cmeta" title="${esc(c.set.name)} · ${esc(c.rarity)}">${esc(opts.meta || c.set.name + ' · ' + c.rarity)}</div>
+    ${opts.note ? `<div class="cnote">${opts.note}</div>` : ''}
     <div class="crow"><b>${usd(c.value)}</b>${opts.action ? opts.action(c, n) : ''}</div>
   </div>`;
 }
@@ -1092,7 +1142,8 @@ function openSpecies(n) {
 $('#modalBox').addEventListener('click', e => {
   if (e.target.closest('[data-close]')) return closeModal();
   const os = e.target.closest('[data-openset]');
-  if (os) { closeModal(); return openPacks(SETS[+os.dataset.openset], 1); }
+  if (os) { closeModal(); return openPacks(SETS[+os.dataset.openset], +os.dataset.n || 1); }
+  if (e.target.closest('[data-showall]')) { setModalAll = !setModalAll; return openSetModal(SETS[+e.target.closest('[data-showall]').dataset.showall]); }
   const z = e.target.closest('.cimg');
   if (z) openZoom(BY_ID.get(z.closest('.ccard').dataset.id));
 });
@@ -1531,9 +1582,68 @@ function renderStats() {
     </div>`;
 }
 
+// ================= Nasıl oynanır? (yeni oyuncu rehberi) =================
+const CREDIT_URL = 'https://www.youtube.com/@bamfies';
+const creditHtml = `<div class="credit">💡 Oyunun fikri tamamen <a href="${CREDIT_URL}" target="_blank" rel="noopener"><b>bamfies</b></a>'in YouTube içeriklerinden geliyor.
+  Kanalı: <a href="${CREDIT_URL}" target="_blank" rel="noopener">youtube.com/@bamfies</a></div>`;
+const INTRO_STEPS = [
+  { icon: '🎴', title: "PokéKart'a hoş geldin!", body: `
+    <p>Bu bir Pokémon kart paketi açma oyunu. Gerçek setler, gerçek kartlar ve gerçek piyasa fiyatlarıyla oynanır.</p>
+    <p><b>Amaç:</b> Pokédex'i tamamlamak. Her Pokémon için onun <b>illustration kartını</b> (Illustration Rare veya Special Illustration Rare) bulmalısın. Illustration kartı olmayan Pokémon'larda hedef, o Pokémon'un <b>en değerli kartı</b>.</p>
+    <p>Oyuna <b>${fmt(CFG.START_COINS)} jetonla</b>, yani yaklaşık 10 paketlik parayla başlıyorsun.</p>
+    ${creditHtml}` },
+  { icon: '📦', title: 'Paket aç', body: `
+    <p><b>Paket Aç</b> sekmesinde her set ayrı bir paket. Paketi yırtınca kartlar <b>deste</b> halinde gelir; en üstten tıklayarak (veya Boşluk tuşuyla) tek tek açarsın.</p>
+    <p>Illustration, değerli ya da Pokédex'ine eklenecek kartlar <b>kapalı ve parlayarak</b> gelir; önce çevirmen gerekir. 10'lu açmada "Özel karta atla" ile sıradan kartları geçebilirsin.</p>
+    <p>Bir sete tıklayınca o setten çıkabilecek <b>eksik hedef kartlarını</b> görürsün; hangi paketi açacağını buna göre seç.</p>` },
+  { icon: '📖', title: 'Pokédex ve Trainer Destesi', body: `
+    <p><b>Pokédex</b>: siyah silüetler henüz kartı olmayan Pokémon'lar, mavi çerçeveliler kartı olan ama hedefi eksik olanlar, <b>altın</b> çerçeveliler tamamlananlar. <span class="tag-ir">IR</span> hedefi illustration, <span class="tag-best">$</span> hedefi en değerli kart demek. Bir Pokémon'a tıklayınca hedef kartlarını ve hangi sette olduklarını görürsün.</p>
+    <p><b>Trainer Destesi</b>: Supporter, Item, Stadium ve Tool kartları burada aynı mantıkla toplanır.</p>` },
+  { icon: '💰', title: 'Para kazan', body: `
+    <p><b>İş</b> sekmesi bir clicker: Pokémon'a tıkla, jeton kazan. Hızlı tıklamak kombo yapar. Kazandığınla <b>yardımcılar</b> al; oyun kapalıyken bile senin için çalışırlar. Ara ara çıkan ✨ <b>shiny Pokémon</b>'u kaçırma!</p>
+    <p>Clicker parası <b>cüzdan kapasitesine</b> kadar birikir; cüzdanı büyütmek için para ve Pokédex ilerlemesi gerekir.</p>
+    <p><b>Pokébank</b>'a fazla kartlarını satabilirsin. Common/uncommon gibi çer çöp kartları almaz; illustration ve hedef kartlarının bir kopyası her zaman sende kalır.</p>` },
+  { icon: '🏅', title: 'Profil ve ayarlar', body: `
+    <p><b>Trainer</b> sekmesinde kullanıcı adını ve hareketli Pokémon avatarını seçersin; Pokédex'te tamamladığın Pokémon'ların shiny avatarları açılır. Bütün istatistiklerin de burada.</p>
+    <p><b>Ayarlar</b>'dan ses seviyesini, animasyonları ve kayıt yedeğini (dışa / içe aktar) yönetebilirsin. Bu rehbere üst bardaki <b>❓</b> butonundan istediğin zaman dönebilirsin.</p>
+    ${creditHtml}
+    <p style="margin-top:14px"><b>İyi şanslar, antrenör!</b></p>` },
+];
+let introStep = 0;
+function showIntro(step = 0) {
+  introStep = step;
+  const s = INTRO_STEPS[step], last = step === INTRO_STEPS.length - 1;
+  $('#introBox').innerHTML = `<button class="close-x" data-intro-close>×</button>
+    <div class="intro-icon">${s.icon}</div>
+    <h2>${s.title}</h2>
+    <div class="intro-body">${s.body}</div>
+    <div class="intro-nav">
+      <div class="intro-dots">${INTRO_STEPS.map((_, i) => `<span class="${i === step ? 'on' : ''}" data-intro-go="${i}"></span>`).join('')}</div>
+      <div class="btn-row">
+        ${step > 0 ? '<button class="btn" data-intro-go="prev">‹ Geri</button>' : '<button class="btn" data-intro-close>Atla</button>'}
+        <button class="btn primary" data-intro-go="${last ? 'done' : 'next'}">${last ? 'Başla! 🎴' : 'İleri ›'}</button>
+      </div>
+    </div>`;
+  $('#intro').classList.remove('hidden');
+}
+function closeIntro() {
+  $('#intro').classList.add('hidden');
+  if (!S.seenIntro) { S.seenIntro = true; save(); }
+}
+$('#introBox').addEventListener('click', e => {
+  if (e.target.closest('[data-intro-close]')) return closeIntro();
+  const g = e.target.closest('[data-intro-go]');
+  if (!g) return;
+  const v = g.dataset.introGo;
+  if (v === 'done') return closeIntro();
+  showIntro(v === 'next' ? introStep + 1 : v === 'prev' ? introStep - 1 : +v);
+});
+$('#intro').addEventListener('click', e => { if (e.target.id === 'intro') closeIntro(); });
+
 // ================= Klavye =================
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (!$('#intro').classList.contains('hidden')) return closeIntro();
     if (!zoom.classList.contains('hidden')) return zoom.classList.add('hidden');
     if (!modal.classList.contains('hidden')) return closeModal();
     if (revealState && revealState.stage === 'done') return closeOpening();
@@ -1549,6 +1659,8 @@ document.addEventListener('keydown', e => {
 // ================= Başlat =================
 document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab); });
 $('#hudJob').addEventListener('click', () => showTab('job'));
+$('#hudHelp').addEventListener('click', () => showIntro(0));
+$('#helpBtn').addEventListener('click', () => showIntro(0));
 $('#hudMute').addEventListener('click', () => {
   S.settings.muted = !S.settings.muted;
   if (!S.settings.muted && !S.settings.volume) S.settings.volume = 60;
@@ -1577,7 +1689,8 @@ const offlineGain = accrueIdle();
 updateHud();
 setInterval(tickJob, 1000);
 setInterval(save, 30000);
-if (firstRun) toast(`Hoş geldin! ${fmt(CFG.START_COINS)} jetonla (10 paket) başlıyorsun. Para bitince İş sekmesinde tıklayarak kazan. Hedef: her Pokémon'un illustration kartını toplamak!`, 'gold');
+if (!S.seenIntro) showIntro(0);
+if (firstRun) toast(`Hoş geldin! ${fmt(CFG.START_COINS)} jetonla (10 paket) başlıyorsun. Hedef: her Pokémon'un illustration kartını toplamak!`, 'gold');
 else if (offlineGain >= 1) toast(`💼 Sen yokken yardımcıların <b>${fmt(offlineGain)}</b> jeton kazandı.`, 'gold');
 save();
 })();

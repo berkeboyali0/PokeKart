@@ -579,3 +579,31 @@ body.noanim *, body.noanim *::before, body.noanim *::after { animation: none !im
 .wallet.full .w-full-msg { display: block; color: #ff9b8a; }
 .pill.coin.full { box-shadow: 0 0 0 2px #e3350d; }
 .pill.coin.full b { color: #ff9b8a; }
+
+/* Mağaza: set detay penceresi */
+.set-card { cursor: pointer; }
+.set-card .set-btns { cursor: default; }
+.set-head { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.set-head img { max-width: 220px; max-height: 100px; object-fit: contain; }
+.sh-info h2 { margin: 0 0 4px; }
+.sh-info .btn-row { margin: 10px 0 0; }
+.cnote { font-size: 11px; line-height: 1.35; color: var(--gold); }
+.cnote b { color: var(--text); }
+
+/* Nasıl oynanır? rehberi ve credit */
+#intro { z-index: 60; padding: 20px; }
+.intro-box {
+  position: relative; width: min(620px, 100%); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 16px; padding: 26px 30px 20px; text-align: center;
+}
+.intro-icon { font-size: 54px; line-height: 1; margin-bottom: 6px; }
+.intro-box h2 { margin: 0 0 10px; color: var(--yellow); }
+.intro-body { text-align: left; line-height: 1.6; min-height: 170px; }
+.intro-body p { margin: 8px 0; }
+.intro-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.intro-nav .btn-row { margin: 0; }
+.intro-dots { display: flex; gap: 6px; }
+.intro-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--line); cursor: pointer; }
+.intro-dots span.on { background: var(--yellow); }
+.credit { background: #2a2715; border: 1px solid #6b5a1c; border-radius: 10px; padding: 10px 14px; margin-top: 12px; color: #ffe9a8; line-height: 1.5; }
+.credit a { color: var(--yellow); }
