@@ -12,6 +12,7 @@
   <nav class="tabs">
     <button data-tab="shop" class="active">Paket Aç</button>
     <button data-tab="dex">Pokédex</button>
+    <button data-tab="trainers">Trainer Destesi</button>
     <button data-tab="coll">Koleksiyon</button>
     <button data-tab="bank">Pokébank</button>
     <button data-tab="job">İş</button>
@@ -65,6 +66,30 @@
     <div class="legend muted"><span class="lg lg0"></span>Kart yok <span class="lg lg1"></span>Kartı var <span class="lg lg2"></span>Hedef kart toplandı
       <span style="margin-left:12px"><b class="tag-ir">IR</b> hedef: illustration kartı · <b class="tag-best">$</b> illustration kartı yok, hedef: en değerli kart</span></div>
     <div id="dexGrid" class="dex-grid"></div>
+  </section>
+
+  <section id="tab-trainers" class="tab">
+    <div class="coll-stats" id="trProgress"></div>
+    <div class="toolbar">
+      <input id="trSearch" type="search" placeholder="Trainer ara...">
+      <select id="trFilter">
+        <option value="all">Tümü</option>
+        <option value="missing">Hiç kartı olmayanlar</option>
+        <option value="owned">Kartı var ama hedefi eksik</option>
+        <option value="master">Tamamlananlar</option>
+        <option value="illus">Hedefi illustration olanlar</option>
+      </select>
+      <select id="trType">
+        <option value="">Tüm türler</option>
+        <option value="S">Supporter</option>
+        <option value="I">Item</option>
+        <option value="D">Stadium</option>
+        <option value="T">Pokémon Tool</option>
+      </select>
+      <span class="muted" id="trCount"></span>
+    </div>
+    <p class="muted" style="margin:-4px 0 12px">Trainer kartları burada birikir. Aynı trainer'ın farklı baskıları tek girişte toplanır; hedef illustration versiyonu, yoksa en değerli kartı.</p>
+    <div id="trGrid" class="dex-grid"></div>
   </section>
 
   <section id="tab-coll" class="tab">

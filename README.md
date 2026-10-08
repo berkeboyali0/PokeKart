@@ -23,7 +23,9 @@ Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oy
 
 **Pokédex.** Hedef, her Pokémon'un Illustration Rare ya da Special Illustration Rare kartlarından birini bulmak. Illustration kartı olmayan Pokémon'larda hedef, o Pokémon'un en değerli kartı. Bulunan Pokémon'un hücresinde kartı sergilenir. Bir Pokémon'a tıklayınca hedef kartların hangi setlerde olduğu görünür.
 
-**İş.** Oyun 800 jetonla, yani 10 pakete yetecek parayla başlar; ücretsiz paket yoktur. Para kazanmak için "İşe git". İşteyken oyunda serbestçe dolaşabilirsin ama paket açamazsın. "İşten çık" deyince çalıştığın süre kadar maaş alırsın. Oyun kapalıyken de mesai devam eder (en fazla 8 saat sayılır). Çalıştıkça seviye atlarsın, Pokédex ilerledikçe daha iyi işler açılır.
+**Trainer destesi.** Trainer kartları (Supporter, Item, Stadium, Pokémon Tool) ayrı bir destede toplanır. Aynı trainer'ın farklı baskıları tek girişte birleşir (örneğin "Professor's Research"in bütün profesör versiyonları). Hedef Pokédex'teki gibi: trainer'ın illustration versiyonu, yoksa en değerli kartı. Türe göre filtrelenebilir.
+
+**İş.** Oyun 800 jetonla, yani 10 pakete yetecek parayla başlar; ücretsiz paket yoktur. Para kazanmak için bir mesai seçip işe gidersin: 5 dk, 15 dk, 30 dk ya da 1 saat. Her mesainin toplam maaşı baştan bellidir ve uzun mesailer daha kârlıdır. Çalışırken işe özel bir sahnede Pokémon'un çalışmasını izlersin. Bar dolunca maaş tek seferde ödenir. İşteyken oyunda serbestçe dolaşabilirsin ama paket açamazsın; erken çıkarsan maaş alamazsın. Oyun kapalıyken de mesai devam eder. Çalıştıkça seviye atlarsın, Pokédex ilerledikçe daha iyi işler açılır.
 
 **Pokébank.** Kart satmanın tek yolu. Common, uncommon ve $0.50 altı kartları almaz. Illustration ve Pokédex hedef kartlarının 1 kopyası her zaman sende kalır.
 

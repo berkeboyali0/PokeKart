@@ -10,10 +10,13 @@ const CFG = {
   MIN_PACK_PRICE: 80,
   NEW_SPECIES_BONUS: 10,      // yeni bir Pokémon'un ilk kartı
   TARGET_BONUS: 150,          // bir Pokémon'un hedef kartını (illustration) bulmak
+  NEW_TRAINER_BONUS: 5,       // yeni bir trainer'ın ilk kartı
+  TRAINER_TARGET_BONUS: 50,   // bir trainer'ın hedef kartını bulmak
   ILLUS_RATE: 0.125,          // pakette Illustration Rare çıkma şansı (~1/8)
   SPECIAL_ILLUS_RATE: 0.033,  // pakette Special Illustration Rare çıkma şansı (~1/30)
   GOD_PACK_CHANCE: 1 / 500,   // tüm kartları nadir / illustration olan paket
-  SHIFT_MAX_HOURS: 8,         // bir mesai en fazla bu kadar sürer, sonrasında maaş artmaz
+  // mesai seçenekleri: süre (dk) ve maaş çarpanı (uzun mesai daha kârlı)
+  SHIFTS: [{ min: 5, mult: 1 }, { min: 15, mult: 1.2 }, { min: 30, mult: 1.4 }, { min: 60, mult: 1.7 }],
   JOB_LEVEL_MINUTES: 60,      // her 60 dakika çalışma = 1 seviye
   JOB_MAX_LEVEL: 10,
   JOB_LEVEL_BONUS: 0.1,       // her seviye +%10 maaş
@@ -25,15 +28,30 @@ const CFG = {
 };
 const SAVE_KEY = 'pokekart_save_v1';
 
-// İşler: req = gereken tamamlanmış Pokédex sayısı, rate = jeton/dakika (seviye 1)
+// İşler: req = gereken tamamlanmış Pokédex sayısı, rate = dakika başı temel değer (mesai maaşı bundan hesaplanır)
+// scene = çalışma sahnesinin arka planı, icons = sahnede uçuşan nesneler, status = sırayla değişen durum yazıları
 const JOBS = [
-  { id: 'center', name: 'Pokémon Center Stajyeri', desc: "Nurse Joy'a yardım et, yorgun Pokémon'ları iyileştir.", sprite: 113, rate: 8, req: 0 },
-  { id: 'berry', name: 'Berry Çiftçisi', desc: 'Berry tarlasını sula, olgunlaşanları topla.', sprite: 357, rate: 15, req: 15 },
-  { id: 'mart', name: 'PokéMart Kasiyeri', desc: 'Poké Ball ve Potion sat, rafları düzenle.', sprite: 52, rate: 25, req: 40 },
-  { id: 'lab', name: 'Profesör Asistanı', desc: 'Laboratuvarda Pokédex verilerini derle.', sprite: 137, rate: 40, req: 90 },
-  { id: 'gym', name: 'Gym Lideri', desc: 'Meydan okuyan antrenörlerle savaş, rozet dağıt.', sprite: 68, rate: 65, req: 180 },
-  { id: 'elite', name: 'Elite Four Üyesi', desc: 'Ligin en güçlü antrenörlerinden biri ol.', sprite: 448, rate: 100, req: 300 },
-  { id: 'champ', name: 'Şampiyon', desc: 'Bölgenin şampiyonu olarak unvanını koru.', sprite: 149, rate: 160, req: 450 },
+  { id: 'center', name: 'Pokémon Center Stajyeri', desc: "Nurse Joy'a yardım et, yorgun Pokémon'ları iyileştir.", sprite: 113, rate: 12, req: 0,
+    scene: 'linear-gradient(#f7c6d9, #fde8f0)', icons: ['💊', '❤️', '🩹', '✨', '💉'],
+    status: ["Yorgun Pokémon'lar iyileştiriliyor...", 'Potion şişeleri dolduruluyor...', 'Hasta kayıtları tutuluyor...', "Nurse Joy'a yardım ediliyor..."] },
+  { id: 'berry', name: 'Berry Çiftçisi', desc: 'Berry tarlasını sula, olgunlaşanları topla.', sprite: 357, rate: 20, req: 15,
+    scene: 'linear-gradient(#9fd8ff, #d9f2ff 60%)', icons: ['🍓', '🍇', '🍒', '💧', '🌱', '🍑'],
+    status: ['Tarla sulanıyor...', 'Olgun berry\'ler toplanıyor...', 'Yeni tohumlar ekiliyor...', 'Sepetler dolduruluyor...'] },
+  { id: 'mart', name: 'PokéMart Kasiyeri', desc: 'Poké Ball ve Potion sat, rafları düzenle.', sprite: 52, rate: 32, req: 40,
+    scene: 'linear-gradient(#bcd7f5, #eaf3ff)', icons: ['🛒', '🧪', '💰', '🏷️', '📦'],
+    status: ['Müşterilere Poké Ball satılıyor...', 'Raflar düzenleniyor...', 'Kasa sayılıyor...', 'Yeni ürünler diziliyor...'] },
+  { id: 'lab', name: 'Profesör Asistanı', desc: 'Laboratuvarda Pokédex verilerini derle.', sprite: 137, rate: 50, req: 90,
+    scene: 'linear-gradient(#cfe9e4, #f2fbf9)', icons: ['🔬', '📘', '🧬', '💡', '🧪'],
+    status: ['Pokédex verileri derleniyor...', 'Numuneler inceleniyor...', 'Rapor yazılıyor...', 'Deney sonuçları kaydediliyor...'] },
+  { id: 'gym', name: 'Gym Lideri', desc: 'Meydan okuyan antrenörlerle savaş, rozet dağıt.', sprite: 68, rate: 80, req: 180,
+    scene: 'linear-gradient(#f5d6a8, #fff1dc)', icons: ['🏅', '⚡', '🔥', '💥', '💪'],
+    status: ['Meydan okuyan antrenörle savaşılıyor...', 'Rozet hazırlanıyor...', 'Takım antrenmanı yapılıyor...', 'Gym temizleniyor...'] },
+  { id: 'elite', name: 'Elite Four Üyesi', desc: 'Ligin en güçlü antrenörlerinden biri ol.', sprite: 448, rate: 120, req: 300,
+    scene: 'linear-gradient(#c9b8f0, #ece6ff)', icons: ['⚔️', '🔥', '💎', '⭐', '🌀'],
+    status: ['Lig maçı oynanıyor...', 'Rakip takımlar analiz ediliyor...', 'Özel antrenman yapılıyor...', 'Taraftarlar selamlanıyor...'] },
+  { id: 'champ', name: 'Şampiyon', desc: 'Bölgenin şampiyonu olarak unvanını koru.', sprite: 149, rate: 190, req: 450,
+    scene: 'linear-gradient(#ffe08a, #fff6d6)', icons: ['👑', '🏆', '⭐', '🎉', '✨'],
+    status: ['Şampiyonluk unvanı korunuyor...', 'Basın toplantısı yapılıyor...', 'Genç antrenörlere ders veriliyor...', 'Kupa parlatılıyor...'] },
 ];
 
 // Nadirlik seviyeleri: 0 Common, 1 Uncommon, 2 Rare, 3 Holo, 4 ex/V/GX, 5 Ultra, 6 Secret/Hyper
@@ -80,7 +98,8 @@ for (const r of D.cards) {
   const set = SETS[r[2]];
   if (!set || !usableSets.has(r[2])) continue;
   const rarity = D.rarities[r[4]] || 'Promo';
-  const c = { id: r[0], name: r[1], set, num: r[3], rarity, tier: tierOf(rarity), dex: Array.isArray(r[5]) ? [...new Set(r[5])] : [], price: r[6], img: r[7], st: r[8] };
+  const c = { id: r[0], name: r[1], set, num: r[3], rarity, tier: tierOf(rarity), dex: Array.isArray(r[5]) ? [...new Set(r[5])] : [], price: r[6], img: r[7], st: r[8], sub: r[9] || '' };
+  if (c.st === 1) c.dex = [];   // trainer kartları Pokédex'e değil trainer destesine sayılır
   c.illus = /illustration rare/i.test(rarity);          // Illustration Rare + Special Illustration Rare
   c.sir = /special illustration/i.test(rarity);
   c.value = c.price > 0 ? c.price : TIER_DEFAULT_PRICE[c.tier];
@@ -119,6 +138,35 @@ for (let n = 1; n <= maxDex; n++) {
 }
 const TARGET_IDS = new Set();
 for (const sp of DEX) for (const c of sp.targets) TARGET_IDS.add(c.id);
+
+// Trainer destesi: aynı trainer'ın farklı baskıları tek girişte toplanır
+// ("Professor's Research (Professor Oak)" ve "(Professor Sada)" -> "Professor's Research").
+// Hedef Pokédex ile aynı: illustration versiyonu, yoksa en değerli kart.
+const TRAINER_TYPES = { S: 'Supporter', I: 'Item', D: 'Stadium', T: 'Pokémon Tool' };
+const trainerKey = name => name.replace(/\s*\(.*\)\s*$/, '').trim();
+const TRAINER_MAP = new Map();
+for (const c of CARDS) {
+  if (c.st !== 1) continue;
+  const k = trainerKey(c.name);
+  if (!TRAINER_MAP.has(k)) TRAINER_MAP.set(k, { name: k, cards: [] });
+  TRAINER_MAP.get(k).cards.push(c);
+}
+const TRAINERS = [...TRAINER_MAP.values()].sort((a, b) => a.name.localeCompare(b.name));
+const TRAINER_TARGET_IDS = new Set();
+TRAINERS.forEach((t, i) => {
+  t.i = i;
+  t.cards.sort((a, b) => b.value - a.value);
+  t.best = t.cards.find(c => c.price > 0) || t.cards[0];
+  const illus = t.cards.filter(c => c.illus);
+  t.mode = illus.length ? 'illus' : 'best';
+  t.targets = illus.length ? illus : [t.best];
+  const subs = {};
+  for (const c of t.cards) if (c.sub) subs[c.sub] = (subs[c.sub] || 0) + 1;
+  t.sub = Object.keys(subs).sort((a, b) => subs[b] - subs[a])[0] || '';
+  for (const c of t.cards) c.trainer = t;
+  for (const c of t.targets) TRAINER_TARGET_IDS.add(c.id);
+});
+const isTargetCard = c => TARGET_IDS.has(c.id) || TRAINER_TARGET_IDS.has(c.id);
 
 // Paket yapısı ve fiyatı
 const priceDamp = c => 1 / Math.sqrt(1 + c.value);         // aynı nadirlikte pahalı kart daha zor çıkar
@@ -161,7 +209,7 @@ for (const s of SHOP_SETS) {
 // ================= Kayıt =================
 function newState() {
   return { coins: CFG.START_COINS, owned: {}, got: {},
-    job: { id: 'center', working: false, start: 0, xp: {} },
+    job: { id: 'center', working: false, start: 0, dur: 0, pay: 0, xp: {} },
     stats: { packs: 0, cardsOpened: 0, illusPulled: 0, sirPulled: 0, earned: 0, salary: 0, workMinutes: 0, shifts: 0, bestPull: null, godPacks: 0 },
     settings: { noanim: false, volume: 60, muted: false } };
 }
@@ -174,6 +222,12 @@ function loadState(d) {
   if (st.job.kasa > 0) { st.coins += Math.floor(st.job.kasa); st.stats.salary += Math.floor(st.job.kasa); }
   delete st.job.kasa; delete st.job.ts; delete st.freePacks; delete st.freeTs; delete st.lastDaily;
   if (!d.stats || d.stats.cardsOpened == null) st.stats.cardsOpened = st.stats.packs * 10;
+  // eski süresiz mesai: çalışılan süreyi (en fazla 8 saat) ödeyip kapat
+  if (st.job.working && !st.job.dur) {
+    const min = Math.min(480, Math.max(0, (Date.now() - st.job.start) / 60000)), pay = Math.floor(min * 8);
+    st.coins += pay; st.stats.salary += pay;
+    Object.assign(st.job, { working: false, start: 0, dur: 0, pay: 0 });
+  }
   return st;
 }
 let S;
@@ -189,6 +243,9 @@ const own = id => S.owned[id] || 0;
 const speciesOwned = sp => sp.cards.some(c => S.owned[c.id]);
 const isComplete = sp => sp.targets.some(c => S.owned[c.id]);
 const spState = sp => isComplete(sp) ? 2 : speciesOwned(sp) ? 1 : 0;
+const trainerOwned = t => t.cards.some(c => S.owned[c.id]);
+const isTrainerComplete = t => t.targets.some(c => S.owned[c.id]);
+const trState = t => isTrainerComplete(t) ? 2 : trainerOwned(t) ? 1 : 0;
 const cardCoins = c => Math.max(1, Math.round(c.value * CFG.SELL_PER_USD));
 const glow = v => v >= 100 ? 4 : v >= 20 ? 3 : v >= 5 ? 2 : v >= 1 ? 1 : 0;
 const isAbs = c => /^https?:/.test(c.img);
@@ -199,7 +256,7 @@ let completedCount = 0;
 
 function addCard(c) {
   const before = own(c.id);
-  const r = { c, isNew: before === 0, newSpecies: [], newTarget: [], bonus: 0 };
+  const r = { c, isNew: before === 0, newSpecies: [], newTarget: [], newTrainer: false, newTrainerTarget: false, bonus: 0 };
   if (before === 0) {
     for (const n of c.dex) {
       const sp = SPECIES[n];
@@ -207,12 +264,18 @@ function addCard(c) {
       if (!speciesOwned(sp)) r.newSpecies.push(sp);
       if (sp.targets.includes(c) && !isComplete(sp)) r.newTarget.push(sp);
     }
+    const t = c.trainer;
+    if (t) {
+      r.newTrainer = !trainerOwned(t);
+      r.newTrainerTarget = t.targets.includes(c) && !isTrainerComplete(t);
+    }
     S.got[c.id] = Date.now();
   }
   S.owned[c.id] = before + 1;
   S.stats.cardsOpened++;
   if (c.illus) { S.stats.illusPulled++; if (c.sir) S.stats.sirPulled++; }
-  r.bonus = r.newSpecies.length * CFG.NEW_SPECIES_BONUS + r.newTarget.length * CFG.TARGET_BONUS;
+  r.bonus = r.newSpecies.length * CFG.NEW_SPECIES_BONUS + r.newTarget.length * CFG.TARGET_BONUS
+    + (r.newTrainer ? CFG.NEW_TRAINER_BONUS : 0) + (r.newTrainerTarget ? CFG.TRAINER_TARGET_BONUS : 0);
   S.coins += r.bonus;
   const bp = S.stats.bestPull && BY_ID.get(S.stats.bestPull);
   if (!bp || c.value > bp.value) S.stats.bestPull = c.id;
@@ -225,6 +288,7 @@ function bankInfo(c) {
   if (!c.illus && (c.tier < 2 || c.value < CFG.BANK_MIN_VALUE)) return { n: 0, why: 'Pokébank bu kartı almıyor (common/uncommon veya $' + CFG.BANK_MIN_VALUE.toFixed(2) + ' altı)' };
   if (c.illus) return { n: Math.max(0, n - 1), why: 'Illustration kart: 1 kopyası korunur' };
   if (TARGET_IDS.has(c.id)) return { n: Math.max(0, n - 1), why: 'Pokédex hedef kartı: 1 kopyası korunur' };
+  if (TRAINER_TARGET_IDS.has(c.id)) return { n: Math.max(0, n - 1), why: 'Trainer destesi hedef kartı: 1 kopyası korunur' };
   return { n, why: '' };
 }
 function bankSell(c, k) {
@@ -340,109 +404,170 @@ function updateHud() {
   }
 }
 
-// ================= İş: işe git, çalış, işten çık =================
-// İşteyken oyunda serbestçe dolaşabilirsin ama paket açamazsın. Maaş işten çıkınca ödenir.
-// Oyun kapalıyken de mesai devam eder (en fazla SHIFT_MAX_HOURS saat).
+// ================= İş: mesai seç, bar dolana kadar bekle, maaşı al =================
+// Her mesainin süresi ve toplam maaşı baştan bellidir. Bar dolunca maaş otomatik ödenir.
+// İşteyken oyunda dolaşabilirsin ama paket açamazsın. Erken çıkarsan maaş alamazsın.
+// Oyun kapalıyken de mesai devam eder; oyunu açtığında bitmişse maaş ödenir.
 const jobById = id => JOBS.find(j => j.id === id) || JOBS[0];
 const curJob = () => jobById(S.job.id);
 const levelFromXp = xp => Math.min(CFG.JOB_MAX_LEVEL, 1 + Math.floor(xp / CFG.JOB_LEVEL_MINUTES));
 const jobLevel = j => levelFromXp(S.job.xp[j.id] || 0);
 const jobRate = j => j.rate * (1 + CFG.JOB_LEVEL_BONUS * (jobLevel(j) - 1));
-const shiftMax = () => CFG.SHIFT_MAX_HOURS * 60;
-const shiftMinutes = () => S.job.working ? Math.min(Math.max(0, (Date.now() - S.job.start) / 60000), shiftMax()) : 0;
-const shiftEarned = () => Math.floor(jobRate(curJob()) * shiftMinutes());
-const clock = min => { const s = Math.floor(min * 60); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+const shiftPay = (j, sh) => Math.round(jobRate(j) * sh.min * sh.mult / 5) * 5;
+const shiftProgress = () => S.job.working ? Math.min(1, Math.max(0, (Date.now() - S.job.start) / (S.job.dur * 60000))) : 0;
+const shiftLeftMin = () => S.job.working ? Math.max(0, S.job.dur - (Date.now() - S.job.start) / 60000) : 0;
+const clock = min => { const s = Math.ceil(min * 60); const h = Math.floor(s / 3600); return `${h ? h + ':' : ''}${String(Math.floor(s / 60) % 60).padStart(h ? 2 : 1, '0')}:${String(s % 60).padStart(2, '0')}`; };
+const durLabel = min => min >= 60 ? `${min / 60} saat` : `${min} dk`;
 
-function goToWork() {
+function startShift(k) {
   if (S.job.working) return;
   if (revealState) return toast('Önce paket ekranını kapat.', 'err');
-  S.job.working = true;
-  S.job.start = Date.now();
+  const j = curJob(), sh = CFG.SHIFTS[k];
+  Object.assign(S.job, { working: true, start: Date.now(), dur: sh.min, pay: shiftPay(j, sh) });
   save(); updateHud(); refreshCurrent();
   SFX.play('work');
-  toast(`💼 İşe gittin: <b>${esc(curJob().name)}</b>. İşteyken paket açamazsın.`, 'gold');
+  toast(`💼 İşe gittin: <b>${esc(j.name)}</b> · ${durLabel(sh.min)} sonra <b>${fmt(S.job.pay)}</b> jeton. İşteyken paket açamazsın.`, 'gold');
 }
-function leaveWork() {
-  if (!S.job.working) return;
-  const j = curJob(), min = shiftMinutes(), pay = shiftEarned(), lvlBefore = jobLevel(j);
-  S.job.xp[j.id] = (S.job.xp[j.id] || 0) + min;
-  S.job.working = false;
-  S.job.start = 0;
+function completeShift(silent) {
+  const j = curJob(), pay = S.job.pay || 0, lvlBefore = jobLevel(j);
+  S.job.xp[j.id] = (S.job.xp[j.id] || 0) + S.job.dur;
   S.coins += pay;
   S.stats.salary += pay;
-  S.stats.workMinutes += min;
+  S.stats.workMinutes += S.job.dur;
   S.stats.shifts++;
+  Object.assign(S.job, { working: false, start: 0, dur: 0, pay: 0 });
+  save(); updateHud();
+  if (currentTab === 'job' || currentTab === 'shop') refreshCurrent();
+  SFX.play('coins');
+  toast(`💼 Mesai tamamlandı! <b>+${fmt(pay)}</b> jeton maaş aldın.${silent ? ' (sen yokken bitti)' : ''}`, 'gold');
+  if (jobLevel(j) > lvlBefore) { SFX.play('levelup', 600); toast(`⬆️ ${esc(j.name)} seviye ${jobLevel(j)}! Maaşın arttı.`, 'gold'); }
+}
+function quitShift() {
+  if (!S.job.working) return;
+  if (!confirm(`Mesai bitmeden çıkarsan maaş (${fmt(S.job.pay)} jeton) ödenmez. Yine de çıkılsın mı?`)) return;
+  Object.assign(S.job, { working: false, start: 0, dur: 0, pay: 0 });
   save(); updateHud(); refreshCurrent();
-  SFX.play(pay > 0 ? 'coins' : 'work');
-  toast(`💼 Mesai bitti: ${clock(min)} çalıştın, <b>+${fmt(pay)}</b> jeton maaş aldın.`, 'gold');
-  if (jobLevel(j) > lvlBefore) SFX.play('levelup', 600);
-  if (jobLevel(j) > lvlBefore) toast(`⬆️ ${esc(j.name)} seviye ${jobLevel(j)}! Maaşın arttı.`, 'gold');
+  toast('İşten erken çıktın, maaş alamadın.');
 }
 function switchJob(id) {
   const j = jobById(id);
-  if (S.job.working) return toast('İş değiştirmek için önce işten çık.', 'err');
+  if (S.job.working) return toast('İş değiştirmek için önce mesaini bitir.', 'err');
   if (j.req > completedCount) return;
   S.job.id = j.id;
   save(); renderJob();
   toast(`Yeni işin: <b>${esc(j.name)}</b>`, 'gold');
 }
+function tickJob() {
+  if (S.job.working && shiftProgress() >= 1) completeShift(false);
+  updateJobHud();
+}
 function updateJobHud() {
-  const w = S.job.working, min = shiftMinutes(), full = min >= shiftMax();
-  $('#hudKasa').textContent = w ? `İşte · ${clock(min)} · +${fmt(shiftEarned())}` : 'Boşta';
-  $('#hudJob').classList.toggle('full', w && full);
+  const w = S.job.working, p = shiftProgress(), left = shiftLeftMin();
+  $('#hudKasa').textContent = w ? `%${Math.floor(p * 100)} · ${clock(left)}` : 'Boşta';
   $('#hudJob').classList.toggle('working', w);
-  $('#hudJob').title = w ? `${curJob().name} · tıkla ve iş sekmesine git` : 'İşe gitmek için tıkla';
-  if (w && $('#shiftTime')) {
-    $('#shiftTime').textContent = clock(min);
-    $('#shiftEarn').textContent = fmt(shiftEarned());
-    $('#shiftBar').style.width = (min / shiftMax() * 100) + '%';
-    $('#shiftNote').textContent = full ? 'Mesai süresi doldu, artık maaş artmıyor. İşten çıkıp maaşını al!' : '';
-    const j = curJob(), xp = (S.job.xp[j.id] || 0) + min, lvl = levelFromXp(xp);
-    $('#jobXpBar').style.width = (lvl >= CFG.JOB_MAX_LEVEL ? 100 : (xp % CFG.JOB_LEVEL_MINUTES) / CFG.JOB_LEVEL_MINUTES * 100) + '%';
+  $('#hudJob').classList.remove('full');
+  $('#hudJob').title = w ? `${curJob().name} · ${fmt(S.job.pay)} jeton · tıkla ve iş sekmesine git` : 'İşe gitmek için tıkla';
+  if (w && $('#shiftBar')) {
+    $('#shiftBar').style.width = (p * 100) + '%';
+    $('#shiftPct').textContent = `%${Math.floor(p * 100)}`;
+    $('#shiftLeft').textContent = clock(left);
   }
   const banner = $('#workBanner');
-  if (banner) banner.innerHTML = w ? `<span>💼 Şu an iştesin (<b>${esc(curJob().name)}</b>) · ${clock(min)} · +${fmt(shiftEarned())} jeton. İşteyken paket açamazsın.</span>
-      <button class="btn gold" data-leave>İşten çık ve maaşını al</button>` : '';
-  if (banner) banner.classList.toggle('hidden', !w);
+  if (banner) {
+    banner.innerHTML = w ? `<span>💼 Şu an işteysin (<b>${esc(curJob().name)}</b>) · %${Math.floor(p * 100)} · ${clock(left)} kaldı · bitince <b>${fmt(S.job.pay)}</b> jeton. İşteyken paket açamazsın.</span>
+      <div class="mini-bar"><div style="width:${p * 100}%"></div></div>
+      <button class="btn" data-tab-go="job">İşe bak</button>` : '';
+    banner.classList.toggle('hidden', !w || currentTab === 'job');
+  }
 }
+
+// Çalışma sahnesi animasyonu: yürüyen Pokémon, uçuşan iş nesneleri, değişen durum yazısı
+let sceneTimers = [];
+function stopScene() { sceneTimers.forEach(clearInterval); sceneTimers = []; }
+function startScene(j) {
+  stopScene();
+  const scene = $('#workScene');
+  if (!scene) return;
+  let si = 0;
+  const status = $('#sceneStatus');
+  status.textContent = j.status[0];
+  sceneTimers.push(setInterval(() => {
+    if (!document.body.contains(scene)) return stopScene();
+    si = (si + 1) % j.status.length;
+    status.textContent = j.status[si];
+  }, 3500));
+  if (S.settings.noanim) return;
+  sceneTimers.push(setInterval(() => {
+    if (!document.body.contains(scene)) return stopScene();
+    const el = document.createElement('span');
+    el.className = 'scene-item';
+    el.textContent = j.icons[Math.floor(Math.random() * j.icons.length)];
+    el.style.left = (8 + Math.random() * 84) + '%';
+    el.style.fontSize = (18 + Math.random() * 14) + 'px';
+    scene.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }, 900));
+}
+
 function renderJob() {
+  stopScene();
   const j = curJob(), w = S.job.working;
   const xp = (S.job.xp[j.id] || 0), lvl = jobLevel(j);
-  $('#jobMain').innerHTML = `<div class="job-main ${w ? 'is-working' : ''}">
-    <div class="job-stage">${w ? `<span class="coin-pop">+${fmt(jobRate(j))}</span>` : ''}
-      <img class="job-sprite ${w ? '' : 'idle'}" src="${w ? CFG.ANIM_SPRITE(j.sprite) : CFG.SPRITE(j.sprite)}" onerror="this.onerror=null;this.src='${CFG.SPRITE(j.sprite)}'" alt=""></div>
-    <div class="job-info">
-      <div class="muted">${w ? 'Şu an mesaidesin' : 'İşin'}</div>
-      <h2>${esc(j.name)}</h2>
-      <p class="muted">${esc(j.desc)}</p>
-      <div class="job-row">
-        <div>Maaş<br><b>${fmt(jobRate(j))}</b> jeton/dk</div>
-        <div>Seviye <b>${lvl}</b>/${CFG.JOB_MAX_LEVEL}<div class="xp-bar"><div id="jobXpBar" style="width:${lvl >= CFG.JOB_MAX_LEVEL ? 100 : (xp % CFG.JOB_LEVEL_MINUTES) / CFG.JOB_LEVEL_MINUTES * 100}%"></div></div>
-          <span class="muted" style="font-size:12px">Her ${CFG.JOB_LEVEL_MINUTES} dk çalışma = +1 seviye (+%${CFG.JOB_LEVEL_BONUS * 100} maaş)</span></div>
+  const xpPct = lvl >= CFG.JOB_MAX_LEVEL ? 100 : (xp % CFG.JOB_LEVEL_MINUTES) / CFG.JOB_LEVEL_MINUTES * 100;
+  const levelHtml = `<div class="job-row">
+      <div>Seviye <b>${lvl}</b>/${CFG.JOB_MAX_LEVEL}<div class="xp-bar"><div style="width:${xpPct}%"></div></div>
+        <span class="muted" style="font-size:12px">Her ${CFG.JOB_LEVEL_MINUTES} dk çalışma = +1 seviye (+%${CFG.JOB_LEVEL_BONUS * 100} maaş)</span></div>
+    </div>`;
+  if (w) {
+    $('#jobMain').innerHTML = `<div class="job-main is-working">
+      <div class="work-scene" id="workScene" style="--scene:${j.scene}">
+        <div class="scene-ground"></div>
+        <img class="walker" src="${CFG.ANIM_SPRITE(j.sprite)}" onerror="this.onerror=null;this.src='${CFG.SPRITE(j.sprite)}'" alt="">
+        <div class="scene-status" id="sceneStatus"></div>
       </div>
-      ${w ? `
+      <div class="job-info">
+        <div class="muted">Mesaidesin</div>
+        <h2>${esc(j.name)}</h2>
+        <div class="shift-bar"><div id="shiftBar"></div><span id="shiftPct">%0</span></div>
         <div class="job-row">
-          <div>Mesai süresi<br><b id="shiftTime">0:00:00</b></div>
-          <div>Kazanılan<br><b id="shiftEarn">0</b> jeton</div>
+          <div>Kalan süre<br><b id="shiftLeft">-</b></div>
+          <div>Mesai<br><b>${durLabel(S.job.dur)}</b></div>
+          <div>Bitince alacağın<br><b>${fmt(S.job.pay)}</b> jeton</div>
         </div>
-        <div class="kasa-bar"><div id="shiftBar"></div></div>
-        <button class="btn gold big" id="leaveBtn">🏠 İşten çık ve maaşını al</button>
-        <p class="muted" id="shiftNote" style="margin-top:8px"></p>`
-      : `<button class="btn primary big" id="workBtn">🚶 İşe git</button>
-        <p class="muted" style="font-size:12px;margin-top:10px">İşteyken oyunda serbestçe dolaşabilirsin ama <b>paket açamazsın</b>. Maaşını işten çıkınca alırsın.
-        Oyun kapalıyken de çalışmaya devam edersin; bir mesai en fazla ${CFG.SHIFT_MAX_HOURS} saat sayılır.</p>`}
-    </div></div>`;
-  if (w) $('#leaveBtn').addEventListener('click', leaveWork);
-  else $('#workBtn').addEventListener('click', goToWork);
+        ${levelHtml}
+        <p class="muted" style="font-size:12px">Bar dolunca maaşın otomatik ödenir. Bu sırada oyunda dolaşabilirsin ama paket açamazsın. Oyunu kapatsan da mesai devam eder.</p>
+        <button class="btn danger" id="quitBtn">Erken çık (maaş ödenmez)</button>
+      </div></div>`;
+    $('#quitBtn').addEventListener('click', quitShift);
+    startScene(j);
+  } else {
+    $('#jobMain').innerHTML = `<div class="job-main">
+      <div class="job-stage" style="--scene:${j.scene}">
+        <img class="job-sprite idle" src="${CFG.SPRITE(j.sprite)}" alt=""></div>
+      <div class="job-info">
+        <div class="muted">İşin</div>
+        <h2>${esc(j.name)}</h2>
+        <p class="muted">${esc(j.desc)}</p>
+        ${levelHtml}
+        <div class="muted" style="margin:6px 0 8px">Mesai seç ve işe git:</div>
+        <div class="shift-options">${CFG.SHIFTS.map((sh, k) => `
+          <button class="shift-opt" data-shift="${k}">
+            <span class="so-time">⏱ ${durLabel(sh.min)}</span>
+            <span class="so-pay"><span class="coin-ico"></span> ${fmt(shiftPay(j, sh))}</span>
+            ${sh.mult > 1 ? `<span class="so-bonus">+%${Math.round((sh.mult - 1) * 100)} bonus</span>` : '<span class="so-bonus muted">kısa iş</span>'}
+          </button>`).join('')}</div>
+        <p class="muted" style="font-size:12px;margin-top:10px">Uzun mesailer daha kârlı. İşteyken paket açamazsın; bar dolunca maaşın tek seferde ödenir.</p>
+      </div></div>`;
+  }
   $('#jobList').innerHTML = JOBS.map(x => {
     const locked = x.req > completedCount, cur = x.id === j.id;
     return `<div class="job-card ${cur ? 'current' : ''} ${locked ? 'locked' : ''}">
       <img src="${CFG.SPRITE(x.sprite)}" alt="" loading="lazy">
       <div><div class="jn">${esc(x.name)}</div>
-        <div class="jm">${fmt(x.rate)} jeton/dk · seviye ${jobLevel(x)}</div>
+        <div class="jm">1 saatlik mesai: ${fmt(shiftPay(x, CFG.SHIFTS[CFG.SHIFTS.length - 1]))} jeton · seviye ${jobLevel(x)}</div>
         ${cur ? `<div class="jm" style="color:var(--gold)">${w ? 'Şu an burada çalışıyorsun' : 'Şu anki işin'}</div>`
           : locked ? `<div class="jm">🔒 ${x.req} Pokémon tamamla (${completedCount}/${x.req})</div>`
-          : `<button class="btn primary" data-job="${x.id}" ${w ? 'disabled title="Önce işten çık"' : ''}>Bu işe geç</button>`}
+          : `<button class="btn primary" data-job="${x.id}" ${w ? 'disabled title="Önce mesaini bitir"' : ''}>Bu işe geç</button>`}
       </div></div>`;
   }).join('');
   updateJobHud();
@@ -451,10 +576,11 @@ function renderJob() {
 // ================= Sekmeler =================
 let currentTab = 'shop';
 function showTab(name) {
+  if (name !== 'job') stopScene();
   currentTab = name;
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
-  ({ shop: renderShop, dex: renderDex, coll: renderColl, bank: renderBank, job: renderJob, stats: renderStats, settings: renderSettings })[name]();
+  ({ shop: renderShop, dex: renderDex, trainers: renderTrainers, coll: renderColl, bank: renderBank, job: renderJob, stats: renderStats, settings: renderSettings })[name]();
   updateJobHud();
 }
 function refreshCurrent() { showTab(currentTab); }
@@ -511,8 +637,10 @@ let revealState = null;
 function badgesHtml(r) {
   let b = '';
   if (r.newTarget.length) b += `<span class="badge best">★ POKÉDEX</span>`;
+  if (r.newTrainerTarget) b += `<span class="badge best">★ TRAINER</span>`;
   if (r.c.illus) b += `<span class="badge ir">${r.c.sir ? 'SPECIAL ILLUS.' : 'ILLUSTRATION'}</span>`;
   if (r.newSpecies.length) b += `<span class="badge sp">YENİ POKÉMON</span>`;
+  else if (r.newTrainer) b += `<span class="badge tr">YENİ TRAINER</span>`;
   else if (r.isNew && !r.c.illus) b += `<span class="badge new">YENİ</span>`;
   return b;
 }
@@ -554,7 +682,7 @@ function tearPack() {
 }
 // Deste: kartlar üst üste gelir, en üstten tek tek açılır (tekli ve toplu açmada aynı).
 // Sıradan kartlar açık gelir; illustration / değerli / Pokédex hedefi kartlar kapalı gelir ve önce çevrilir.
-const isSpecial = r => r.c.illus || r.c.value >= 20 || r.newTarget.length > 0;
+const isSpecial = r => r.c.illus || r.c.value >= 20 || r.newTarget.length > 0 || r.newTrainerTarget;
 const STACK_DEPTH = 8;          // destede görünen kart kalınlığı
 const SEEN_MAX = 30;            // altta gösterilen geçilmiş kart sayısı
 function showCards() {
@@ -615,6 +743,8 @@ function announce(i) {
   if (r.newTarget.length) SFX.play('target', 450);
   for (const sp of r.newTarget) toast(`★ <b>${esc(sp.name)}</b> Pokédex'e eklendi! +${CFG.TARGET_BONUS} jeton`, 'gold');
   for (const sp of r.newSpecies) toast(`Yeni Pokémon: <b>#${sp.n} ${esc(sp.name)}</b> +${CFG.NEW_SPECIES_BONUS}`);
+  if (r.newTrainerTarget) { SFX.play('target', 450); toast(`★ <b>${esc(r.c.trainer.name)}</b> trainer destesine eklendi! +${CFG.TRAINER_TARGET_BONUS} jeton`, 'gold'); }
+  else if (r.newTrainer) toast(`Yeni trainer: <b>${esc(r.c.trainer.name)}</b> +${CFG.NEW_TRAINER_BONUS}`);
 }
 function flipTop() {
   const st = revealState, el = topEl(), r = st.results[st.next];
@@ -682,7 +812,7 @@ function finishReveal() {
     const nSp = results.reduce((s, r) => s + r.newSpecies.length, 0);
     const nTarget = results.reduce((s, r) => s + r.newTarget.length, 0);
     const nIllus = results.filter(r => r.c.illus).length;
-    shown = results.filter(r => r.c.illus || r.newTarget.length || r.newSpecies.length || r.c.value >= 3)
+    shown = results.filter(r => r.c.illus || r.newTarget.length || r.newSpecies.length || r.newTrainerTarget || r.c.value >= 3)
       .sort((a, b) => (b.newTarget.length - a.newTarget.length) || (b.c.illus - a.c.illus) || (b.c.value - a.c.value)).slice(0, 80);
     title = `${packs.length} paket açıldı: ${esc(set.name)}<small>Öne çıkan kartlar · büyütmek için karta tıkla</small>`;
     sum = `${results.length} kart · değer <b>${usd(total)}</b> · ${nIllus} illustration · ${nTarget} Pokédex hedefi · ${nSp} yeni Pokémon · ${nNew} yeni kart${bonus ? ` · bonus <b>+${bonus}</b>` : ''}`;
@@ -801,7 +931,7 @@ function closeModal() { modal.classList.add('hidden'); $('#modalBox').innerHTML 
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
 function miniCard(c, opts = {}) {
-  const n = own(c.id), isT = TARGET_IDS.has(c.id);
+  const n = own(c.id), isT = isTargetCard(c);
   return `<div class="ccard ${n ? '' : 'unowned'} ${c.illus ? 'is-illus' : ''} ${isT ? 'is-target' : ''}" data-id="${esc(c.id)}">
     <div class="cimg" data-name="${esc(c.name)}"><img loading="lazy" src="${imgSmall(c)}" alt="" onerror="this.classList.add('broken');this.parentNode.classList.add('noimg')"></div>
     ${n > 1 || (n && opts.showOne) ? `<span class="count">x${n}</span>` : ''}
@@ -844,6 +974,82 @@ $('#modalBox').addEventListener('click', e => {
   const z = e.target.closest('.cimg');
   if (z) openZoom(BY_ID.get(z.closest('.ccard').dataset.id));
 });
+
+// ================= Trainer destesi =================
+let trainerBuilt = false;
+const trainerShowcase = t => t.cards.find(c => c.illus && own(c.id)) || t.cards.find(c => own(c.id)) || null;
+function initTrainers() {
+  ['trSearch', 'trFilter', 'trType'].forEach(id => $('#' + id).addEventListener('input', renderTrainers));
+  $('#trGrid').addEventListener('click', e => {
+    const cell = e.target.closest('.dex-cell');
+    if (cell) openTrainer(+cell.dataset.t);
+  });
+}
+function renderTrainers() {
+  const grid = $('#trGrid');
+  if (!trainerBuilt) {
+    grid.innerHTML = TRAINERS.map(t => `<div class="dex-cell tr-cell" data-t="${t.i}">
+      <span class="dex-no">${esc(TRAINER_TYPES[t.sub] || 'Trainer')}</span>
+      <span class="dex-tag">${t.mode === 'illus' ? '<b class="tag-ir">IR</b>' : '<b class="tag-best">$</b>'}</span>
+      <div class="dex-art"><img loading="lazy" src="${imgSmall(t.best)}" alt=""></div>
+      <span class="dex-name" title="${esc(t.name)}">${esc(t.name)}</span>
+      <span class="dex-val"></span></div>`).join('');
+    trainerBuilt = true;
+  }
+  const q = $('#trSearch').value.trim().toLowerCase(), f = $('#trFilter').value, type = $('#trType').value;
+  const cells = grid.children;
+  let shown = 0, done = 0, owned = 0;
+  for (let i = 0; i < TRAINERS.length; i++) {
+    const t = TRAINERS[i], st = trState(t), cell = cells[i];
+    if (st) owned++;
+    if (st === 2) done++;
+    cell.className = 'dex-cell tr-cell s' + st;
+    const dc = trainerShowcase(t), key = dc ? dc.id : '';
+    if (cell.dataset.shown !== key) {
+      cell.dataset.shown = key;
+      cell.querySelector('.dex-art img').src = imgSmall(dc || t.best);
+      cell.querySelector('.dex-val').textContent = dc
+        ? `${dc.illus ? (dc.sir ? 'Special Illus.' : 'Illustration') : dc.rarity} · ${usd(dc.value)}`
+        : (t.mode === 'illus' ? `${t.targets.length} illustration` : `en değerli: ${usd(t.best.value)}`);
+    }
+    cell.classList.toggle('has-card', !!dc);
+    let vis = true;
+    if (q && !t.name.toLowerCase().includes(q)) vis = false;
+    if (type && t.sub !== type) vis = false;
+    if (f === 'missing' && st !== 0) vis = false;
+    if (f === 'owned' && st !== 1) vis = false;
+    if (f === 'master' && st !== 2) vis = false;
+    if (f === 'illus' && t.mode !== 'illus') vis = false;
+    cell.style.display = vis ? '' : 'none';
+    if (vis) shown++;
+  }
+  $('#trCount').textContent = `${shown} trainer gösteriliyor`;
+  $('#trProgress').innerHTML = `
+    <div class="stat"><b>${done}/${TRAINERS.length}</b><span>tamamlanan trainer</span></div>
+    <div class="stat"><b>${owned}/${TRAINERS.length}</b><span>en az bir kartı olan</span></div>
+    <div class="stat"><b>${TRAINERS.filter(t => t.mode === 'illus' && isTrainerComplete(t)).length}/${TRAINERS.filter(t => t.mode === 'illus').length}</b><span>illustration ile tamamlanan</span></div>`;
+}
+function openTrainer(i) {
+  const t = TRAINERS[i], st = trState(t);
+  const chips = ['Kartı yok', 'Kartı var · hedef eksik', '★ Destede tamamlandı'];
+  const packBtn = c2 => `<button class="btn" data-openset="${c2.set.i}" title="${esc(c2.set.name)} paketi aç">Paket</button>`;
+  const others = t.cards.filter(c => !t.targets.includes(c));
+  const head = t.mode === 'illus'
+    ? `<h3 style="color:var(--gold)">★ Hedef: illustration kartlarından herhangi biri (${t.targets.filter(c => own(c.id)).length}/${t.targets.length} sende)</h3>
+       <p class="muted">Bu kartlar paketlerdeki özel illustration slotundan çıkar.</p>`
+    : `<h3 style="color:var(--gold)">★ Hedef: en değerli kart</h3>
+       <p class="muted">Bu trainer'ın illustration kartı yok, bu yüzden hedef en değerli kartı.</p>`;
+  $('#modalBox').innerHTML = `<button class="close-x" data-close>×</button>
+    <div class="sp-head"><div><div class="muted">${esc(TRAINER_TYPES[t.sub] || 'Trainer')}</div><h2>${esc(t.name)}</h2>
+      <span class="chip c${st}">${chips[st]}</span> <span class="muted">${t.cards.filter(c => own(c.id)).length}/${t.cards.length} kartı sende</span></div></div>
+    <div class="sp-best" style="display:block">${head}
+      <div class="card-grid">${t.targets.map(c => miniCard(c, { showOne: true, action: packBtn })).join('')}</div>
+    </div>
+    ${others.length ? `<h3>Diğer baskıları (${others.length}) <span class="muted" style="font-weight:400;font-size:13px">değere göre</span></h3>
+    <div class="card-grid">${others.map(c => miniCard(c, { showOne: true, action: packBtn })).join('')}</div>` : ''}`;
+  modal.classList.remove('hidden');
+  modal.scrollTop = 0;
+}
 
 // ================= Ortak: sayfalama =================
 function pagerHtml(page, pages) {
@@ -1077,6 +1283,13 @@ function renderStats() {
       ${statBox(`${owned}/${DEX.length}`, 'en az bir kartı olan')}
       ${statBox(`${bestOwned}/${DEX.length}`, 'en değerli kartı sende olan')}
     </div>
+    <h3>Trainer destesi</h3>
+    <div class="coll-stats">
+      ${statBox(`${TRAINERS.filter(isTrainerComplete).length}/${TRAINERS.length}`, 'tamamlanan trainer')}
+      ${statBox(`${TRAINERS.filter(t => t.mode === 'illus' && isTrainerComplete(t)).length}/${TRAINERS.filter(t => t.mode === 'illus').length}`, 'illustration ile tamamlanan')}
+      ${statBox(`${TRAINERS.filter(trainerOwned).length}/${TRAINERS.length}`, 'en az bir kartı olan')}
+      ${statBox(`${fmt(ownedCards.filter(c => c.st === 1).length)}/${fmt(CARDS.filter(c => c.st === 1).length)}`, 'farklı trainer kartı')}
+    </div>
     <h3>Koleksiyon</h3>
     <div class="coll-stats">
       ${statBox(`${fmt(ownIr + ownSir)}/${fmt(allIr + allSir)}`, 'farklı illustration kart')}
@@ -1132,19 +1345,21 @@ $('#hudMute').addEventListener('click', () => {
   SFX.play('coin');
 });
 $('#jobList').addEventListener('click', e => { const b = e.target.closest('[data-job]'); if (b) switchJob(b.dataset.job); });
-$('#workBanner').addEventListener('click', e => { if (e.target.closest('[data-leave]')) leaveWork(); });
+$('#workBanner').addEventListener('click', e => { if (e.target.closest('[data-tab-go]')) showTab('job'); });
+$('#jobMain').addEventListener('click', e => { const b = e.target.closest('[data-shift]'); if (b) startShift(+b.dataset.shift); });
 $('#statsMain').addEventListener('click', e => {
   if (e.target.closest('[data-reset]')) return resetGame();
   const c = e.target.closest('.ccard');
   if (c) openZoom(BY_ID.get(c.dataset.id));
 });
-initShop(); initDex(); initColl(); initBank(); initSettings();
+initShop(); initDex(); initTrainers(); initColl(); initBank(); initSettings();
 applySettings();
 updateHud();
 showTab('shop');
-setInterval(updateJobHud, 1000);
+if (S.job.working && shiftProgress() >= 1) completeShift(true);
+setInterval(tickJob, 1000);
 setInterval(save, 30000);
 if (firstRun) toast(`Hoş geldin! ${fmt(CFG.START_COINS)} jetonla (10 paket) başlıyorsun. Para bitince işe git. Hedef: her Pokémon'un illustration kartını toplamak!`, 'gold');
-else if (S.job.working) toast(`💼 Hâlâ iştesin: ${clock(shiftMinutes())} çalıştın, +${fmt(shiftEarned())} jeton birikti.`, 'gold');
+else if (S.job.working) toast(`💼 Hâlâ iştesin: mesainin bitmesine ${clock(shiftLeftMin())} var.`, 'gold');
 save();
 })();

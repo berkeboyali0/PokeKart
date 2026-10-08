@@ -68,7 +68,7 @@ for ($i = 0; $i -lt $sets.Count; $i++) {
 Write-Host "  $($sets.Count) set bulundu."
 
 # ---- Kartlar (set set indirilir; yarida kalirsa data\cache sayesinde kaldigi yerden devam eder) ----
-$select = 'id,name,supertype,nationalPokedexNumbers,rarity,set,number,images,tcgplayer,cardmarket'
+$select = 'id,name,supertype,nationalPokedexNumbers,rarity,set,number,images,tcgplayer,cardmarket,subtypes'
 $pageSize = 250
 $cacheDir = Join-Path $dataDir 'cache'
 New-Item -ItemType Directory -Force $cacheDir | Out-Null
@@ -156,11 +156,14 @@ foreach ($c in $allCards) {
     $dex = if ($c.nationalPokedexNumbers) { '[' + (($c.nationalPokedexNumbers | ForEach-Object { [int]$_ }) -join ',') + ']' } else { '0' }
     $st = 0
     if ($c.supertype -eq 'Trainer') { $st = 1 } elseif ($c.supertype -eq 'Energy') { $st = 2 }
+    # trainer turu: S=Supporter, I=Item, D=Stadium, T=Pokemon Tool
+    $sub = ''
+    if ($st -eq 1 -and $c.subtypes) { $sts = @($c.subtypes); if ($sts -contains 'Supporter') { $sub = 'S' } elseif ($sts -contains 'Stadium') { $sub = 'D' } elseif ($sts -match 'Tool') { $sub = 'T' } else { $sub = 'I' } }
     $price = [Math]::Round((Get-Price $c), 2).ToString($inv)
     $img = [string]$c.images.small
     $img = $img.Replace('https://images.pokemontcg.io/', '')
     if ($img.EndsWith('.png')) { $img = $img.Substring(0, $img.Length - 4) }
-    $cardsOut.Add("[$(Q $c.id),$(Q $c.name),$($setIndex[$c.set.id]),$(Q $c.number),$($rarIndex[$r]),$dex,$price,$(Q $img),$st]")
+    $cardsOut.Add("[$(Q $c.id),$(Q $c.name),$($setIndex[$c.set.id]),$(Q $c.number),$($rarIndex[$r]),$dex,$price,$(Q $img),$st,$(Q $sub)]")
 }
 
 $missing = foreach ($v in $pkIllus.Values) { foreach ($e in $v) { if (-not $e.used) { $e.label } } }
