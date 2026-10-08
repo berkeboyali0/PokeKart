@@ -17,6 +17,12 @@ const CFG = {
   GOD_PACK_CHANCE: 1 / 500,   // tüm kartları nadir / illustration olan paket
   // mesai seçenekleri: süre (dk) ve maaş çarpanı (uzun mesai daha kârlı)
   SHIFTS: [{ min: 5, mult: 1 }, { min: 15, mult: 1.2 }, { min: 30, mult: 1.4 }, { min: 60, mult: 1.7 }],
+  // mesai sırasında sahneye tıklamak: her tıklama süreyi biraz kısaltır, maaşı biraz artırır (mesai başına sınırlı)
+  CLICK_TIME_PCT: 0.003,      // tıklama başı mesai süresinin %0,3'ü kadar kısalma
+  CLICK_PAY_PCT: 0.0025,      // tıklama başı temel maaşın %0,25'i kadar artış
+  CLICK_MAX_TIME_PCT: 0.25,   // mesai başına en fazla %25 kısalma
+  CLICK_MAX_PAY_PCT: 0.2,     // mesai başına en fazla %20 ek maaş
+  CLICK_MIN_INTERVAL: 160,    // ms; bundan hızlı tıklamalar sayılmaz
   JOB_LEVEL_MINUTES: 60,      // her 60 dakika çalışma = 1 seviye
   JOB_MAX_LEVEL: 10,
   JOB_LEVEL_BONUS: 0.1,       // her seviye +%10 maaş
@@ -414,8 +420,10 @@ const levelFromXp = xp => Math.min(CFG.JOB_MAX_LEVEL, 1 + Math.floor(xp / CFG.JO
 const jobLevel = j => levelFromXp(S.job.xp[j.id] || 0);
 const jobRate = j => j.rate * (1 + CFG.JOB_LEVEL_BONUS * (jobLevel(j) - 1));
 const shiftPay = (j, sh) => Math.round(jobRate(j) * sh.min * sh.mult / 5) * 5;
-const shiftProgress = () => S.job.working ? Math.min(1, Math.max(0, (Date.now() - S.job.start) / (S.job.dur * 60000))) : 0;
-const shiftLeftMin = () => S.job.working ? Math.max(0, S.job.dur - (Date.now() - S.job.start) / 60000) : 0;
+const shiftElapsed = () => Date.now() - S.job.start + (S.job.boostMs || 0);   // tıklamalar süreyi öne çeker
+const shiftProgress = () => S.job.working ? Math.min(1, Math.max(0, shiftElapsed() / (S.job.dur * 60000))) : 0;
+const shiftTotalPay = () => (S.job.pay || 0) + Math.floor(S.job.bonus || 0);
+const shiftLeftMin = () => S.job.working ? Math.max(0, S.job.dur - shiftElapsed() / 60000) : 0;
 const clock = min => { const s = Math.ceil(min * 60); const h = Math.floor(s / 3600); return `${h ? h + ':' : ''}${String(Math.floor(s / 60) % 60).padStart(h ? 2 : 1, '0')}:${String(s % 60).padStart(2, '0')}`; };
 const durLabel = min => min >= 60 ? `${min / 60} saat` : `${min} dk`;
 
@@ -423,31 +431,69 @@ function startShift(k) {
   if (S.job.working) return;
   if (revealState) return toast('Önce paket ekranını kapat.', 'err');
   const j = curJob(), sh = CFG.SHIFTS[k];
-  Object.assign(S.job, { working: true, start: Date.now(), dur: sh.min, pay: shiftPay(j, sh) });
+  Object.assign(S.job, { working: true, start: Date.now(), dur: sh.min, pay: shiftPay(j, sh), boostMs: 0, bonus: 0, clicks: 0 });
   save(); updateHud(); refreshCurrent();
   SFX.play('work');
   toast(`💼 İşe gittin: <b>${esc(j.name)}</b> · ${durLabel(sh.min)} sonra <b>${fmt(S.job.pay)}</b> jeton. İşteyken paket açamazsın.`, 'gold');
 }
 function completeShift(silent) {
-  const j = curJob(), pay = S.job.pay || 0, lvlBefore = jobLevel(j);
-  S.job.xp[j.id] = (S.job.xp[j.id] || 0) + S.job.dur;
+  const j = curJob(), pay = shiftTotalPay(), lvlBefore = jobLevel(j);
+  const bonusXp = (S.job.boostMs || 0) / 60000;   // tıklamayla kazanılan süre kadar ek deneyim
+  S.job.xp[j.id] = (S.job.xp[j.id] || 0) + S.job.dur + bonusXp;
   S.coins += pay;
   S.stats.salary += pay;
   S.stats.workMinutes += S.job.dur;
   S.stats.shifts++;
-  Object.assign(S.job, { working: false, start: 0, dur: 0, pay: 0 });
+  Object.assign(S.job, { working: false, start: 0, dur: 0, pay: 0, boostMs: 0, bonus: 0, clicks: 0 });
   save(); updateHud();
   if (currentTab === 'job' || currentTab === 'shop') refreshCurrent();
   SFX.play('coins');
-  toast(`💼 Mesai tamamlandı! <b>+${fmt(pay)}</b> jeton maaş aldın.${silent ? ' (sen yokken bitti)' : ''}`, 'gold');
+  toast(`💼 Mesai tamamlandı! <b>+${fmt(pay)}</b> jeton maaş aldın${bonusXp >= 1 / 60 ? `, tıklama bonusuyla +${clock(bonusXp)} ek deneyim kazandın` : ""}.${silent ? ' (sen yokken bitti)' : ''}`, 'gold');
   if (jobLevel(j) > lvlBefore) { SFX.play('levelup', 600); toast(`⬆️ ${esc(j.name)} seviye ${jobLevel(j)}! Maaşın arttı.`, 'gold'); }
 }
 function quitShift() {
   if (!S.job.working) return;
-  if (!confirm(`Mesai bitmeden çıkarsan maaş (${fmt(S.job.pay)} jeton) ödenmez. Yine de çıkılsın mı?`)) return;
-  Object.assign(S.job, { working: false, start: 0, dur: 0, pay: 0 });
+  if (!confirm(`Mesai bitmeden çıkarsan maaş (${fmt(shiftTotalPay())} jeton) ödenmez. Yine de çıkılsın mı?`)) return;
+  Object.assign(S.job, { working: false, start: 0, dur: 0, pay: 0, boostMs: 0, bonus: 0, clicks: 0 });
   save(); updateHud(); refreshCurrent();
   toast('İşten erken çıktın, maaş alamadın.');
+}
+// Sahneye tıklamak: süreyi biraz kısaltır, maaşı biraz artırır. Mesai başına sınırlı, çok hızlı tıklamalar sayılmaz.
+let lastWorkClick = 0;
+const boostLimits = () => ({ maxMs: S.job.dur * 60000 * CFG.CLICK_MAX_TIME_PCT, maxBonus: S.job.pay * CFG.CLICK_MAX_PAY_PCT });
+function workClick(e) {
+  if (!S.job.working || shiftProgress() >= 1) return;
+  const now = performance.now();
+  if (now - lastWorkClick < CFG.CLICK_MIN_INTERVAL) return;
+  lastWorkClick = now;
+  const { maxMs, maxBonus } = boostLimits();
+  const dMs = Math.min(S.job.dur * 60000 * CFG.CLICK_TIME_PCT, maxMs - (S.job.boostMs || 0));
+  const dPay = Math.min(S.job.pay * CFG.CLICK_PAY_PCT, maxBonus - (S.job.bonus || 0));
+  const scene = $('#workScene');
+  if (dMs <= 0 && dPay <= 0) {
+    popText(scene, e, 'Bu mesai için bonus doldu!', 'maxed');
+    return;
+  }
+  S.job.boostMs = (S.job.boostMs || 0) + Math.max(0, dMs);
+  S.job.bonus = (S.job.bonus || 0) + Math.max(0, dPay);
+  S.job.clicks = (S.job.clicks || 0) + 1;
+  SFX.play('tap');
+  const walker = scene && scene.querySelector('.walker');
+  if (walker && !S.settings.noanim) { walker.classList.remove('hop'); void walker.offsetWidth; walker.classList.add('hop'); }
+  popText(scene, e, `${dPay >= 1 ? '+' + Math.round(dPay) + ' 🪙 · ' : ''}-${Math.max(1, Math.round(dMs / 1000))} sn`);
+  if (S.job.clicks % 10 === 0) save();
+  tickJob();
+}
+function popText(scene, e, text, cls = '') {
+  if (!scene || S.settings.noanim) return;
+  const r = scene.getBoundingClientRect();
+  const el = document.createElement('span');
+  el.className = 'click-pop ' + cls;
+  el.textContent = text;
+  el.style.left = ((e ? e.clientX - r.left : r.width / 2)) + 'px';
+  el.style.top = ((e ? e.clientY - r.top : r.height / 2)) + 'px';
+  scene.appendChild(el);
+  setTimeout(() => el.remove(), 900);
 }
 function switchJob(id) {
   const j = jobById(id);
@@ -466,15 +512,21 @@ function updateJobHud() {
   $('#hudKasa').textContent = w ? `%${Math.floor(p * 100)} · ${clock(left)}` : 'Boşta';
   $('#hudJob').classList.toggle('working', w);
   $('#hudJob').classList.remove('full');
-  $('#hudJob').title = w ? `${curJob().name} · ${fmt(S.job.pay)} jeton · tıkla ve iş sekmesine git` : 'İşe gitmek için tıkla';
+  $('#hudJob').title = w ? `${curJob().name} · ${fmt(shiftTotalPay())} jeton · tıkla ve iş sekmesine git` : 'İşe gitmek için tıkla';
   if (w && $('#shiftBar')) {
     $('#shiftBar').style.width = (p * 100) + '%';
     $('#shiftPct').textContent = `%${Math.floor(p * 100)}`;
     $('#shiftLeft').textContent = clock(left);
+    $('#shiftPay').textContent = fmt(shiftTotalPay());
+    const { maxMs } = boostLimits();
+    $('#boostPay').textContent = '+' + fmt(S.job.bonus || 0);
+    $('#boostTime').textContent = `-${clock((S.job.boostMs || 0) / 60000)}`;
+    $('#boostXp').textContent = `+${clock((S.job.boostMs || 0) / 60000)}`;
+    $('#boostBar').style.width = (maxMs ? (S.job.boostMs || 0) / maxMs * 100 : 0) + '%';
   }
   const banner = $('#workBanner');
   if (banner) {
-    banner.innerHTML = w ? `<span>💼 Şu an işteysin (<b>${esc(curJob().name)}</b>) · %${Math.floor(p * 100)} · ${clock(left)} kaldı · bitince <b>${fmt(S.job.pay)}</b> jeton. İşteyken paket açamazsın.</span>
+    banner.innerHTML = w ? `<span>💼 Şu an işteysin (<b>${esc(curJob().name)}</b>) · %${Math.floor(p * 100)} · ${clock(left)} kaldı · bitince <b>${fmt(shiftTotalPay())}</b> jeton. İşteyken paket açamazsın.</span>
       <div class="mini-bar"><div style="width:${p * 100}%"></div></div>
       <button class="btn" data-tab-go="job">İşe bak</button>` : '';
     banner.classList.toggle('hidden', !w || currentTab === 'job');
@@ -524,6 +576,7 @@ function renderJob() {
         <div class="scene-ground"></div>
         <img class="walker" src="${CFG.ANIM_SPRITE(j.sprite)}" onerror="this.onerror=null;this.src='${CFG.SPRITE(j.sprite)}'" alt="">
         <div class="scene-status" id="sceneStatus"></div>
+        <div class="scene-hint">👆 Tıkla, daha hızlı çalış!</div>
       </div>
       <div class="job-info">
         <div class="muted">Mesaidesin</div>
@@ -532,7 +585,12 @@ function renderJob() {
         <div class="job-row">
           <div>Kalan süre<br><b id="shiftLeft">-</b></div>
           <div>Mesai<br><b>${durLabel(S.job.dur)}</b></div>
-          <div>Bitince alacağın<br><b>${fmt(S.job.pay)}</b> jeton</div>
+          <div>Bitince alacağın<br><b id="shiftPay">${fmt(shiftTotalPay())}</b> jeton</div>
+        </div>
+        <div class="boost-row">
+          <span>👆 Tıklama bonusu: <b id="boostPay">+0</b> jeton · <b id="boostTime">-0 sn</b> süre · <b id="boostXp">+0 sn</b> deneyim</span>
+          <div class="mini-bar boost-bar" title="Bu mesaide alınabilecek tıklama bonusu"><div id="boostBar"></div></div>
+          <span class="muted" style="font-size:12px">en fazla +%${CFG.CLICK_MAX_PAY_PCT * 100} maaş, -%${CFG.CLICK_MAX_TIME_PCT * 100} süre, +%${CFG.CLICK_MAX_TIME_PCT * 100} deneyim</span>
         </div>
         ${levelHtml}
         <p class="muted" style="font-size:12px">Bar dolunca maaşın otomatik ödenir. Bu sırada oyunda dolaşabilirsin ama paket açamazsın. Oyunu kapatsan da mesai devam eder.</p>
@@ -1346,7 +1404,11 @@ $('#hudMute').addEventListener('click', () => {
 });
 $('#jobList').addEventListener('click', e => { const b = e.target.closest('[data-job]'); if (b) switchJob(b.dataset.job); });
 $('#workBanner').addEventListener('click', e => { if (e.target.closest('[data-tab-go]')) showTab('job'); });
-$('#jobMain').addEventListener('click', e => { const b = e.target.closest('[data-shift]'); if (b) startShift(+b.dataset.shift); });
+$('#jobMain').addEventListener('click', e => {
+  const b = e.target.closest('[data-shift]');
+  if (b) return startShift(+b.dataset.shift);
+  if (e.target.closest('#workScene')) workClick(e);
+});
 $('#statsMain').addEventListener('click', e => {
   if (e.target.closest('[data-reset]')) return resetGame();
   const c = e.target.closest('.ccard');

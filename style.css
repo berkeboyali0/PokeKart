@@ -403,6 +403,21 @@ main { padding: 16px 18px 60px; max-width: 1500px; margin: 0 auto; }
   98% { left: 6%; transform: scaleX(1); }
   100% { left: 6%; transform: scaleX(-1); }
 }
+.work-scene { cursor: pointer; user-select: none; -webkit-user-select: none; }
+.work-scene:active { box-shadow: inset 0 0 0 3px rgba(255, 203, 5, .7); }
+.walker.hop { animation: walk 9s linear infinite, hop .32s ease-out; }
+@keyframes hop { 40% { translate: 0 -20px; } }
+.scene-hint { position: absolute; bottom: 8px; left: 0; right: 0; text-align: center; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); animation: pulse 1.6s ease-in-out infinite; pointer-events: none; }
+.click-pop {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+  font-weight: 800; font-size: 14px; color: #fff3b0; text-shadow: 0 1px 3px #000, 0 0 6px rgba(0,0,0,.5);
+  animation: clickPop .9s ease-out forwards;
+}
+.click-pop.maxed { color: #ffb4a8; font-size: 12px; }
+@keyframes clickPop { from { margin-top: 0; opacity: 1; } to { margin-top: -46px; opacity: 0; } }
+.boost-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 10px; font-size: 13px; }
+.boost-row b { color: var(--yellow); }
+.boost-bar > div { background: linear-gradient(90deg, #5fa8ff, #b06bff); transition: width .2s; }
 .scene-item { position: absolute; bottom: 70px; animation: floatUp 2.6s ease-out forwards; pointer-events: none; }
 @keyframes floatUp {
   0% { transform: translateY(0) scale(.6); opacity: 0; }

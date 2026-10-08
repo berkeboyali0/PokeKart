@@ -113,6 +113,8 @@ window.SFX = (function () {
     coins() { for (let i = 0; i < 5; i++) { tone(N.B5, 0.07, { type: 'square', vol: 0.06, at: i * 0.09, filter: 4000 }); tone(N.E6, 0.18, { type: 'square', vol: 0.06, at: i * 0.09 + 0.05, filter: 4000 }); } },
     // seviye atlama
     levelup() { arp([N.C6, N.D6, N.E6, N.G6, N.C7], 0.08, { type: 'square', vol: 0.06, dur: 0.16, filter: 3500 }); tone(N.C7, 0.5, { type: 'triangle', vol: 0.08, at: 0.42 }); },
+    // işte sahneye tıklama
+    tap() { tone(520 + Math.random() * 120, 0.07, { type: 'triangle', vol: 0.1, to: 900 }); noise(0.03, { vol: 0.06, type: 'highpass', from: 4000 }); },
     // işe gitme
     work() { tone(N.G5, 0.15, { type: 'triangle', vol: 0.12 }); tone(N.C6, 0.25, { type: 'triangle', vol: 0.12, at: 0.13 }); },
     // hata
