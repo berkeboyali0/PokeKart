@@ -21,6 +21,9 @@ const CFG = {
   COMBO_TIMEOUT: 1200,        // ms; bu kadar tıklamazsan kombo sıfırlanır
   HELPER_COST_GROWTH: 1.15,   // her yardımcı alımında fiyat artışı
   IDLE_CAP_HOURS: 4,          // oyun kapalıyken en fazla bu kadar saatlik pasif gelir sayılır
+  WALLET_BASE: 5000,          // başlangıç cüzdan kapasitesi (clicker geliri bu tutara kadar birikir)
+  WALLET_GROWTH: 2,           // her cüzdan geliştirmesi kapasiteyi bu kadar katlar
+  WALLET_COST_PCT: 0.6,       // geliştirme fiyatı = mevcut kapasitenin %60'ı
   SHINY_MIN_SEC: 60,          // shiny Pokémon en erken / en geç bu aralıkta çıkar
   SHINY_MAX_SEC: 180,
   SHINY_STAY_SEC: 9,          // ekranda kalma süresi
@@ -407,6 +410,7 @@ function updateHud() {
   $('#barOwned').style.width = (owned / DEX.length * 100) + '%';
   $('#barMaster').style.width = (done / DEX.length * 100) + '%';
   if (prevDone) for (const h of HELPERS) if (h.req > prevDone && h.req <= done) toast(`💼 Yeni yardımcı açıldı: <b>${esc(h.name)}</b> (${esc(h.role)})!`, "gold");
+  if (prevDone && S.clicker && walletReq() > prevDone && walletReq() <= done) toast(`💰 Yeni cüzdan geliştirmesi açıldı: <b>${walletName(walletLvl() + 1)}</b>!`, 'gold');
   updateJobHud();
   if (done === DEX.length && !S.stats.completed) {
     S.stats.completed = Date.now(); save();
@@ -439,11 +443,38 @@ const shinyRate = () => UPGRADES.reduce((m, u) => m * (u.shinyRate && hasUpgrade
 const upgradeAvailable = u => !hasUpgrade(u.id) && (!u.helper || helperCount(HELPERS.find(h => h.id === u.helper)) >= u.needCount);
 const fmtRate = v => v >= 100 ? fmt(v) : v.toLocaleString('tr-TR', { maximumFractionDigits: 1 });
 
+// Cüzdan: clicker geliri paran bu kapasiteye ulaşınca durur. Kapasite para harcanarak büyütülür.
+// (Pokébank satışı ve Pokédex bonusları bu sınırdan etkilenmez.)
+const WALLETS = ['👛 Bozuk para kesesi', '💼 Deri cüzdan', '🧰 Para kutusu', '🗄️ Çelik kasa', '🏦 Banka hesabı', '🏛️ PokéBanka kasası', '💎 Elmas kasa', '👑 Şampiyon hazinesi'];
+const walletLvl = () => S.clicker.walletLvl || 0;
+const walletCap = (lvl = walletLvl()) => CFG.WALLET_BASE * Math.pow(CFG.WALLET_GROWTH, lvl);
+const walletName = (lvl = walletLvl()) => WALLETS[lvl] || `💎 Hazine Lv ${lvl - WALLETS.length + 2}`;
+const walletUpgradeCost = () => Math.round(walletCap() * CFG.WALLET_COST_PCT);
+// Cüzdan geliştirmesi için gereken tamamlanmış Pokédex sayısı (lvl = alınacak seviye)
+const WALLET_REQ = [0, 0, 5, 15, 30, 60, 100, 150];
+const walletReq = (lvl = walletLvl() + 1) => Math.min(DEX.length, lvl < WALLET_REQ.length ? WALLET_REQ[lvl] : WALLET_REQ[WALLET_REQ.length - 1] + (lvl - WALLET_REQ.length + 1) * 80);
+const walletLocked = () => completedCount < walletReq();
+const walletFull = () => S.coins >= walletCap();
+
+// Clicker kazancı: cüzdan kapasitesini aşamaz. Gerçekte eklenen miktarı döner.
 function earn(amount, kind) {
-  S.coins += amount;
-  S.stats.salary += amount;
-  if (kind === 'click') S.stats.clickEarned += amount;
-  else if (kind === 'idle') S.stats.idleEarned += amount;
+  const add = Math.max(0, Math.min(amount, walletCap() - S.coins));
+  if (add <= 0) return 0;
+  S.coins += add;
+  S.stats.salary += add;
+  if (kind === 'click') S.stats.clickEarned += add;
+  else if (kind === 'idle') S.stats.idleEarned += add;
+  return add;
+}
+function buyWallet() {
+  const cost = walletUpgradeCost();
+  if (walletLocked()) return toast(`Bu cüzdan için Pokédex'te ${walletReq()} Pokémon tamamlamalısın (${completedCount}/${walletReq()}).`, 'err');
+  if (S.coins < cost) return toast(`Cüzdanı büyütmek için ${fmt(cost)} jeton gerekiyor.`, 'err');
+  S.coins -= cost;
+  S.clicker.walletLvl = walletLvl() + 1;
+  SFX.play('levelup');
+  toast(`${walletName()} alındı! Kapasite artık <b>${fmt(walletCap())}</b> jeton.`, 'gold');
+  save(); updateHud(); renderJob();
 }
 // Pasif gelir: son kontrolden bu yana geçen süre kadar (en fazla IDLE_CAP_HOURS)
 function accrueIdle() {
@@ -451,8 +482,7 @@ function accrueIdle() {
   const dt = Math.min(Math.max(0, (now - (S.clicker.ts || now)) / 1000), CFG.IDLE_CAP_HOURS * 3600);
   S.clicker.ts = now;
   const gain = totalCps() * dt;
-  if (gain > 0) earn(gain, 'idle');
-  return gain;
+  return gain > 0 ? earn(gain, 'idle') : 0;
 }
 
 // --- tıklama ve kombo ---
@@ -462,9 +492,13 @@ function clickWork(e) {
   const now = performance.now();
   combo = now - lastClickAt < CFG.COMBO_TIMEOUT ? combo + 1 : 1;
   lastClickAt = now;
-  const v = clickValue() * comboMul();
-  earn(v, 'click');
+  const v = earn(clickValue() * comboMul(), 'click');
   S.stats.clicks++;
+  if (v <= 0) {
+    SFX.play('error');
+    popText($('#workScene'), e, 'Cüzdan dolu! Kapasiteyi büyüt', 'maxed');
+    return updateJobHud();
+  }
   SFX.play('tap');
   const mascot = $('#clickMascot');
   if (mascot && !S.settings.noanim) { mascot.classList.remove('hop'); void mascot.offsetWidth; mascot.classList.add('hop'); }
@@ -533,11 +567,10 @@ function maybeSpawnShiny() {
   el.style.top = (18 + Math.random() * 40) + '%';
   el.addEventListener('click', ev => {
     ev.stopPropagation();
-    const bonus = Math.max(25, totalCps() * 30 + clickValue() * 15);
-    earn(bonus, 'click');
+    const bonus = earn(Math.max(25, totalCps() * 30 + clickValue() * 15), 'click');
     S.stats.shinies = (S.stats.shinies || 0) + 1;
     SFX.play('illus');
-    popText(scene, ev, `✨ +${fmt(bonus)}`, 'shiny-pop');
+    popText(scene, ev, bonus > 0 ? `✨ +${fmt(bonus)}` : 'Cüzdan dolu!', 'shiny-pop');
     toast(`✨ Shiny Pokémon yakaladın! <b>+${fmt(bonus)}</b> jeton`, 'gold');
     el.remove();
     save(); updateJobHud();
@@ -558,6 +591,14 @@ function updateJobHud() {
   const cps = totalCps();
   $('#hudCoins').textContent = fmt(S.coins);
   $('#hudKasa').textContent = cps > 0 ? `+${fmtRate(cps)}/sn` : 'Çalış';
+  $('.pill.coin').classList.toggle('full', walletFull());
+  $('.pill.coin').title = `Jeton · cüzdan kapasitesi ${fmt(walletCap())}${walletFull() ? ' (dolu, clicker geliri durdu)' : ''}`;
+  if ($('#walletBar')) {
+    $('#walletBar').style.width = Math.min(100, S.coins / walletCap() * 100) + '%';
+    $('#walletVal').textContent = `${fmt(Math.min(S.coins, walletCap()))} / ${fmt(walletCap())}`;
+    $('#walletBox').classList.toggle('full', walletFull());
+    $('#walletBtn').disabled = walletLocked() || S.coins < walletUpgradeCost();
+  }
   $('#hudJob').title = 'İş: tıkla ve yardımcı al';
   if ($('#cpsVal')) {
     $('#cpsVal').textContent = fmtRate(cps);
@@ -611,12 +652,18 @@ function renderJob() {
         <img class="mascot" id="clickMascot" src="${CFG.ANIM_SPRITE(mascot)}" onerror="this.onerror=null;this.src='${CFG.SPRITE(mascot)}'" alt="" draggable="false">
         <div class="scene-hint">👆 Tıkla, jeton kazan!</div>
       </div>
+      <div class="wallet" id="walletBox">
+        <div class="w-head"><b>${walletName()}</b><span id="walletVal"></span></div>
+        <div class="w-bar"><div id="walletBar"></div></div>
+        <div class="w-foot"><span class="muted w-full-msg">Cüzdan dolu, clicker geliri durdu. Kapasiteyi büyüt ya da paket aç!</span>
+          <button class="btn gold" id="walletBtn" data-buy-wallet>⬆ ${walletName(walletLvl() + 1)} · kapasite ${fmt(walletCap(walletLvl() + 1))} · ${walletLocked() ? `🔒 ${walletReq()} Pokémon tamamla (${completedCount}/${walletReq()})` : `<span class="coin-ico"></span> ${fmt(walletUpgradeCost())}`}</button></div>
+      </div>
       <div class="clicker-stats">
         <div class="stat"><b id="clickVal">0</b><span>tıklama başı</span></div>
         <div class="stat"><b id="cpsVal">0</b><span>saniye başı (pasif)</span></div>
         <div class="stat combo-stat"><b id="comboVal">x1.00</b><span>kombo</span><div class="mini-bar"><div id="comboBar"></div></div></div>
       </div>
-      <p class="muted" style="font-size:12px">Hızlı tıkladıkça kombo artar (en fazla x2). Yardımcılar oyun kapalıyken de çalışır (en fazla ${CFG.IDLE_CAP_HOURS} saat). Arada bir sahnede ✨ shiny Pokémon belirir, kaçmadan tıkla!</p>
+      <p class="muted" style="font-size:12px">Hızlı tıkladıkça kombo artar (en fazla x2). Yardımcılar oyun kapalıyken de çalışır (en fazla ${CFG.IDLE_CAP_HOURS} saat). Clicker geliri cüzdan kapasitesine kadar birikir; para biriktikçe cüzdanı büyüt. Arada bir sahnede ✨ shiny Pokémon belirir, kaçmadan tıkla!</p>
     </div>
     <div class="clicker-right">
       <h3>Yükseltmeler</h3>
@@ -1467,6 +1514,7 @@ function renderStats() {
       ${statBox(fmt(st.clicks), 'toplam tıklama')}
       ${statBox(`+${fmtRate(totalCps())}/sn`, 'pasif gelir', `tıklama başı ${fmtRate(clickValue())}`)}
       ${statBox(fmt(HELPERS.reduce((s, h) => s + helperCount(h), 0)), 'yardımcı', `${UPGRADES.filter(u => hasUpgrade(u.id)).length} yükseltme`)}
+      ${statBox(fmt(walletCap()), 'cüzdan kapasitesi', walletName())}
       ${statBox(fmt(st.shinies || 0), 'yakalanan shiny')}
       ${statBox(fmt(st.earned), 'Pokébank satışı')}
     </div>
@@ -1509,6 +1557,7 @@ $('#hudMute').addEventListener('click', () => {
   SFX.play('coin');
 });
 $('#jobMain').addEventListener('click', e => {
+  if (e.target.closest('[data-buy-wallet]')) return buyWallet();
   const h = e.target.closest('[data-buy-helper]');
   if (h) return buyHelper(h.dataset.buyHelper, +h.dataset.n || 1);
   const u = e.target.closest('[data-buy-upgrade]');

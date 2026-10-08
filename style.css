@@ -564,3 +564,18 @@ body.noanim *, body.noanim *::before, body.noanim *::after { animation: none !im
 .avatar-big:hover { box-shadow: 0 0 0 4px rgba(255, 203, 5, .25); }
 .section-title { margin: 26px 0 4px; font-size: 22px; }
 .avatar-picker { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 4px 18px 12px; margin-bottom: 8px; }
+
+/* İş: cüzdan kapasitesi */
+.wallet { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.w-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.w-head span { font-weight: 700; color: var(--yellow); }
+.w-bar { height: 12px; background: #0a0d18; border-radius: 6px; overflow: hidden; }
+.w-bar > div { height: 100%; background: linear-gradient(90deg, #3fbf6f, #f5c542); transition: width .3s; }
+.w-foot { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.w-foot .btn { justify-content: center; white-space: normal; }
+.w-full-msg { display: none; font-size: 12px; }
+.wallet.full { border-color: #e3350d; }
+.wallet.full .w-bar > div { background: linear-gradient(90deg, #ff8a3d, #e3350d); }
+.wallet.full .w-full-msg { display: block; color: #ff9b8a; }
+.pill.coin.full { box-shadow: 0 0 0 2px #e3350d; }
+.pill.coin.full b { color: #ff9b8a; }
