@@ -214,12 +214,14 @@ for (const s of SHOP_SETS) {
 function newState() {
   return { coins: CFG.START_COINS, owned: {}, got: {},
     clicker: { helpers: {}, upgrades: {}, ts: Date.now() },
+    profile: { name: 'Antrenör', avatar: 25, shiny: false, since: Date.now() },
     stats: { packs: 0, cardsOpened: 0, illusPulled: 0, sirPulled: 0, earned: 0, salary: 0, clicks: 0, clickEarned: 0, idleEarned: 0, shinies: 0, bestPull: null, godPacks: 0 },
     settings: { noanim: false, volume: 60, muted: false } };
 }
 function loadState(d) {
   const st = Object.assign(newState(), d);
   st.clicker = Object.assign(newState().clicker, d.clicker || {});
+  st.profile = Object.assign(newState().profile, d.profile || {});
   st.stats = Object.assign(newState().stats, d.stats || {});
   st.settings = Object.assign(newState().settings, d.settings || {});
   delete st.freePacks; delete st.freeTs; delete st.lastDaily;
@@ -653,7 +655,7 @@ function showTab(name) {
   currentTab = name;
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
-  ({ shop: renderShop, dex: renderDex, trainers: renderTrainers, coll: renderColl, bank: renderBank, job: renderJob, stats: renderStats, settings: renderSettings })[name]();
+  ({ shop: renderShop, dex: renderDex, trainers: renderTrainers, coll: renderColl, bank: renderBank, job: renderJob, profile: () => { renderProfile(); renderStats(); }, settings: renderSettings })[name]();
   updateJobHud();
 }
 function refreshCurrent() { showTab(currentTab); }
@@ -1308,6 +1310,93 @@ function applySettings() {
   const b = $('#hudMute');
   b.textContent = S.settings.muted || !S.settings.volume ? '🔇' : '🔊';
   b.title = S.settings.muted ? 'Sesi aç' : 'Sesi kapat';
+  if (S.profile) updateProfileHud();
+}
+
+// ================= Profil =================
+// Profil fotoğrafı, her nesilden seçilmiş sevilen Pokémon'ların hareketli görselleridir (dosya yükleme yok).
+// Pokédex'te tamamlanan Pokémon'ların shiny hali de seçilebilir.
+const AVATARS = [
+  [1, [25, 6, 150, 133, 143, 94]],
+  [2, [197, 196, 249, 250, 248, 157]],
+  [3, [384, 282, 257, 359, 330, 380]],
+  [4, [448, 445, 493, 392, 483, 491]],
+  [5, [571, 635, 643, 609, 612, 494]],
+  [6, [658, 700, 681, 655, 716, 706]],
+  [7, [778, 745, 724, 727, 800, 785]],
+  [8, [887, 815, 823, 888, 812, 861]],
+  [9, [906, 937, 1007, 1000, 970, 959]],
+];
+const TITLES = [[0, 'Çaylak Antrenör'], [10, 'Antrenör'], [50, 'Usta Antrenör'], [150, 'Gym Lideri'], [300, 'Elite Four'], [500, 'Şampiyon'], [800, 'Pokémon Profesörü']];
+const avatarUrl = (n, shiny) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${shiny ? 'shiny/' : ''}${n}.gif`;
+const speciesName = n => (SPECIES[n] && SPECIES[n].name) || '#' + n;
+const shinyUnlocked = n => !!(SPECIES[n] && SPECIES[n].targets && isComplete(SPECIES[n]));
+function trainerTitle() {
+  if (completedCount >= DEX.length) return 'Pokémon Ustası';
+  let t = TITLES[0][1];
+  for (const [need, name] of TITLES) if (completedCount >= need) t = name;
+  return t;
+}
+function updateProfileHud() {
+  const p = S.profile;
+  $('#hudAvatar').src = avatarUrl(p.avatar, p.shiny && shinyUnlocked(p.avatar));
+  $('#hudName').textContent = p.name;
+}
+function renderProfile() {
+  const p = S.profile;
+  const shinyOn = p.shiny && shinyUnlocked(p.avatar);
+  const next = TITLES.find(([need]) => need > completedCount);
+  $('#profileMain').innerHTML = `
+    <div class="profile-card">
+      <button class="avatar-big ${shinyOn ? 'shiny-on' : ''}" data-toggle-avatars title="Profil fotoğrafını değiştir"><img src="${avatarUrl(p.avatar, shinyOn)}" alt=""></button>
+      <div class="pf-info">
+        <label class="muted" for="pfName">Kullanıcı adı</label>
+        <input id="pfName" class="pf-name" maxlength="20" value="${esc(p.name)}" placeholder="Antrenör" autocomplete="off">
+        <div class="pf-title">🏅 ${esc(trainerTitle())}</div>
+        <div class="muted">${next ? `Sonraki unvan: <b>${esc(next[1])}</b> (${completedCount}/${next[0]} Pokémon)` : 'En yüksek unvana ulaştın!'}</div>
+        <div class="muted">Avatar: ${esc(speciesName(p.avatar))}${shinyOn ? ' ✨ shiny' : ''} · Antrenörlük başlangıcı: ${new Date(p.since).toLocaleDateString('tr-TR')}</div>
+        <div><button class="btn" data-toggle-avatars>${avatarPickerOpen ? 'Profil fotoğrafı seçimini kapat' : '🖼️ Profil fotoğrafını değiştir'}</button></div>
+      </div>
+    </div>
+    ${avatarPickerOpen ? `<div class="avatar-picker">
+    <h3 class="pf-h">Profil fotoğrafı</h3>
+    <p class="muted" style="margin-top:-4px">Her nesilden sevilen Pokémon'lar. ✨ butonu, o Pokémon'u Pokédex'te tamamladığında açılır ve shiny halini seçer.</p>
+    ${AVATARS.map(([gen, list]) => `
+      <div class="avatar-gen"><span class="ag-title">${gen}. nesil</span>
+        <div class="avatar-grid">${list.map(n => {
+          const sel = p.avatar === n, unl = shinyUnlocked(n);
+          return `<div class="avatar-opt ${sel ? 'selected' : ''} ${sel && shinyOn ? 'shiny-on' : ''}">
+            <button class="ao-main" data-avatar="${n}" title="${esc(speciesName(n))}">
+              <img loading="lazy" src="${avatarUrl(n, sel && shinyOn)}" alt="">
+              <span>${esc(speciesName(n))}</span>
+            </button>
+            <button class="ao-shiny" data-avatar="${n}" data-shiny="1" ${unl ? '' : 'disabled'} title="${unl ? 'Shiny halini seç' : 'Shiny için bu Pokémon\'u Pokédex\'te tamamla'}">✨</button>
+          </div>`;
+        }).join('')}</div>
+      </div>`).join('')}
+    </div>` : ''}
+    <h2 class="section-title">İstatistikler</h2>`;
+}
+let avatarPickerOpen = false;
+function initProfile() {
+  $('#profileMain').addEventListener('input', e => {
+    if (e.target.id !== 'pfName') return;
+    S.profile.name = e.target.value.trim().slice(0, 20) || 'Antrenör';
+    updateProfileHud(); save();
+  });
+  $('#profileMain').addEventListener('click', e => {
+    if (e.target.closest('[data-toggle-avatars]')) { avatarPickerOpen = !avatarPickerOpen; return renderProfile(); }
+    const b = e.target.closest('[data-avatar]');
+    if (!b || b.disabled) return;
+    const n = +b.dataset.avatar, shiny = !!b.dataset.shiny;
+    if (shiny && !shinyUnlocked(n)) return;
+    S.profile.avatar = n;
+    S.profile.shiny = shiny;
+    SFX.play(shiny ? 'special' : 'coin');
+    save(); updateProfileHud(); renderProfile();
+  });
+  $('#hudProfile').addEventListener('click', () => showTab('profile'));
+  $('#hudProfile').title = 'Trainer profili';
 }
 
 // ================= İstatistikler =================
@@ -1431,7 +1520,7 @@ $('#statsMain').addEventListener('click', e => {
   const c = e.target.closest('.ccard');
   if (c) openZoom(BY_ID.get(c.dataset.id));
 });
-initShop(); initDex(); initTrainers(); initColl(); initBank(); initSettings();
+initShop(); initDex(); initTrainers(); initColl(); initBank(); initSettings(); initProfile();
 applySettings();
 updateHud();
 showTab('shop');

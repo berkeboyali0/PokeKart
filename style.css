@@ -43,7 +43,7 @@ button, input, select { font: inherit; color: inherit; }
 }
 .tabs button:hover { background: var(--panel2); color: var(--text); }
 .tabs button.active { background: var(--panel2); color: var(--yellow); }
-.hud { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hud { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pill { display: flex; align-items: center; gap: 6px; background: var(--panel2); padding: 6px 12px; border-radius: 99px; }
 .pill small { color: var(--muted); }
 .coin b { color: var(--yellow); font-size: 15px; }
@@ -495,6 +495,37 @@ main { padding: 16px 18px 60px; max-width: 1500px; margin: 0 auto; }
 .h-info small { color: var(--muted); font-size: 12px; }
 .h-buy { display: flex; gap: 6px; }
 
+/* ---------- Profil ---------- */
+.hud-profile { gap: 6px; padding: 3px 12px 3px 4px; }
+.hud-profile img { width: 28px; height: 28px; object-fit: contain; image-rendering: pixelated; background: #0a0d18; border-radius: 50%; }
+.hud-profile b { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1400px) { .hud-profile b { display: none; } .hud-profile { padding: 3px 4px; } }
+.profile-card { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; margin-bottom: 14px; }
+.avatar-big {
+  width: 140px; height: 140px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #2f3a6e, #151a30); border: 3px solid var(--yellow);
+}
+.avatar-big img { max-width: 110px; max-height: 110px; image-rendering: pixelated; }
+.avatar-big.shiny-on { border-color: #ffd84d; box-shadow: 0 0 18px #ffd84d88; }
+.pf-info { display: flex; flex-direction: column; gap: 6px; min-width: 240px; }
+.pf-name { font-size: 22px; font-weight: 800; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; outline: none; max-width: 320px; }
+.pf-name:focus { border-color: var(--yellow); }
+.pf-title { font-size: 16px; font-weight: 700; color: var(--gold); }
+.pf-h { margin: 22px 0 6px; color: var(--yellow); }
+.avatar-gen { margin: 12px 0; }
+.ag-title { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.avatar-opt { position: relative; background: var(--panel); border: 2px solid var(--line); border-radius: 12px; }
+.avatar-opt:hover { border-color: #4a5690; }
+.avatar-opt.selected { border-color: var(--yellow); background: #2a2715; }
+.avatar-opt.shiny-on { box-shadow: 0 0 12px #ffd84d66; }
+.ao-main { width: 100%; background: none; border: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 6px; }
+.ao-main img { width: 72px; height: 72px; object-fit: contain; image-rendering: pixelated; }
+.ao-main span { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ao-shiny { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; font-size: 13px; padding: 0; }
+.ao-shiny:hover:not(:disabled) { border-color: #ffd84d; background: #3a3212; }
+.ao-shiny:disabled { opacity: .3; filter: grayscale(1); cursor: not-allowed; }
+
 /* ---------- İstatistik ---------- */
 #statsMain h3 { margin: 20px 0 10px; color: var(--yellow); }
 #statsMain h3:first-child { margin-top: 0; }
@@ -527,3 +558,9 @@ body.noanim *, body.noanim *::before, body.noanim *::after { animation: none !im
   .reveal-grid { grid-template-columns: repeat(2, minmax(0, 150px)); }
   .toolbar input[type=search] { min-width: 0; flex: 1; }
 }
+
+/* Trainer sekmesi: avatar butonu ve istatistik başlığı */
+.avatar-big { cursor: pointer; padding: 0; color: inherit; }
+.avatar-big:hover { box-shadow: 0 0 0 4px rgba(255, 203, 5, .25); }
+.section-title { margin: 26px 0 4px; font-size: 22px; }
+.avatar-picker { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 4px 18px 12px; margin-bottom: 8px; }

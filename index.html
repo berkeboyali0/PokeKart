@@ -16,10 +16,11 @@
     <button data-tab="coll">Koleksiyon</button>
     <button data-tab="bank">Pokébank</button>
     <button data-tab="job">İş</button>
-    <button data-tab="stats">İstatistik</button>
+    <button data-tab="profile">Trainer</button>
     <button data-tab="settings">Ayarlar</button>
   </nav>
   <div class="hud">
+    <button class="pill pill-btn hud-profile" id="hudProfile" title="Profil"><img id="hudAvatar" alt=""><b id="hudName"></b></button>
     <button class="pill pill-btn" id="hudMute" title="Sesi kapat">🔊</button>
     <button class="pill pill-btn" id="hudJob"><span>💼</span><b id="hudKasa">Boşta</b></button>
     <div class="pill coin" title="Jeton"><span class="coin-ico"></span><b id="hudCoins">0</b></div>
@@ -152,9 +153,11 @@
     <div id="jobMain"></div>
   </section>
 
-  <section id="tab-stats" class="tab">
+  <section id="tab-profile" class="tab">
+    <div id="profileMain"></div>
     <div id="statsMain"></div>
   </section>
+
 
   <section id="tab-settings" class="tab">
     <div class="panel">

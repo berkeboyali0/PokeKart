@@ -31,7 +31,9 @@ Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oy
 
 **Ses efektleri.** Paket yırtma, kart kaydırma ve çevirme, özel kartlar için parıltı, illustration için zil, Special Illustration için fanfar, jeton ve seviye atlama sesleri. Sesler dosyadan çalınmaz, Web Audio API ile anlık üretilir. Ayarlar'dan ses seviyesi değiştirilebilir, üst bardaki 🔊 butonuyla tamamen kapatılabilir.
 
-**İstatistik.** Açılan paket ve kart sayısı, toplanan illustration kartlar, nesillere ve setlere göre ilerleme, kazanç ve çalışma süresi, en değerli kartların. En altta kaydı sıfırlama butonu var.
+**Trainer (profil).** Kullanıcı adını yazar, profil fotoğrafını seçersin. Fotoğraf yüklenmez; her nesilden 6 sevilen Pokémon'un hareketli görselinden (toplam 54) seçilir. Bir Pokémon'u Pokédex'te tamamlayınca onun shiny hali de açılır. Profilde Pokédex ilerlemesine göre bir unvan (Çaylak Antrenör'den Pokémon Ustası'na) görünür; istatistikler de bu sekmede, profilin altındadır.
+
+**İstatistikler (Trainer sekmesinde).** Açılan paket ve kart sayısı, toplanan illustration kartlar, nesillere ve setlere göre ilerleme, kazanç ve çalışma süresi, en değerli kartların. En altta kaydı sıfırlama butonu var.
 
 ## Kayıt
 
