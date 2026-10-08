@@ -163,7 +163,7 @@ function newState() {
   return { coins: CFG.START_COINS, owned: {}, got: {},
     job: { id: 'center', working: false, start: 0, xp: {} },
     stats: { packs: 0, cardsOpened: 0, illusPulled: 0, sirPulled: 0, earned: 0, salary: 0, workMinutes: 0, shifts: 0, bestPull: null, godPacks: 0 },
-    settings: { noanim: false } };
+    settings: { noanim: false, volume: 60, muted: false } };
 }
 function loadState(d) {
   const st = Object.assign(newState(), d);
@@ -310,6 +310,7 @@ function openPacks(set, n) {
 
 // ================= Bildirim =================
 function toast(msg, kind = '') {
+  if (kind === 'err') SFX.play('error');
   const el = document.createElement('div');
   el.className = 'toast ' + kind;
   el.innerHTML = msg;
@@ -358,6 +359,7 @@ function goToWork() {
   S.job.working = true;
   S.job.start = Date.now();
   save(); updateHud(); refreshCurrent();
+  SFX.play('work');
   toast(`💼 İşe gittin: <b>${esc(curJob().name)}</b>. İşteyken paket açamazsın.`, 'gold');
 }
 function leaveWork() {
@@ -371,7 +373,9 @@ function leaveWork() {
   S.stats.workMinutes += min;
   S.stats.shifts++;
   save(); updateHud(); refreshCurrent();
+  SFX.play(pay > 0 ? 'coins' : 'work');
   toast(`💼 Mesai bitti: ${clock(min)} çalıştın, <b>+${fmt(pay)}</b> jeton maaş aldın.`, 'gold');
+  if (jobLevel(j) > lvlBefore) SFX.play('levelup', 600);
   if (jobLevel(j) > lvlBefore) toast(`⬆️ ${esc(j.name)} seviye ${jobLevel(j)}! Maaşın arttı.`, 'gold');
 }
 function switchJob(id) {
@@ -544,6 +548,7 @@ function showPack(set, packs, god) {
 function tearPack() {
   if (!revealState || revealState.stage !== 'pack') return;
   revealState.stage = 'tearing';
+  SFX.play('tear');
   $('#packWrap .pack').classList.add('torn');
   setTimeout(showCards, S.settings.noanim ? 0 : 550);
 }
@@ -596,6 +601,7 @@ function activateTop() {
   $('#skipSpecial').disabled = !hasSpecialAhead && !isSpecial(r);
   if (isSpecial(r)) {
     el.classList.add('special');
+    SFX.play('specialReady');
     hint('✨ Özel bir kart! Çevirmek için tıkla');
   } else {
     flipTop();
@@ -606,6 +612,7 @@ function announce(i) {
   const st = revealState, r = st.results[i];
   if (st.announced.has(i)) return;
   st.announced.add(i);
+  if (r.newTarget.length) SFX.play('target', 450);
   for (const sp of r.newTarget) toast(`★ <b>${esc(sp.name)}</b> Pokédex'e eklendi! +${CFG.TARGET_BONUS} jeton`, 'gold');
   for (const sp of r.newSpecies) toast(`Yeni Pokémon: <b>#${sp.n} ${esc(sp.name)}</b> +${CFG.NEW_SPECIES_BONUS}`);
 }
@@ -613,6 +620,7 @@ function flipTop() {
   const st = revealState, el = topEl(), r = st.results[st.next];
   el.classList.remove('special');
   el.classList.add('flipped');
+  SFX.play(r.c.sir ? 'sir' : r.c.illus ? 'illus' : isSpecial(r) ? 'special' : r.c.value >= 5 ? 'rare' : 'flip');
   if (isSpecial(r) && !S.settings.noanim) setTimeout(() => el.classList.add('burst'), 250);
   announce(st.next);
   if (isSpecial(r)) hint('Sonraki kart için tıkla veya Boşluk');
@@ -629,6 +637,7 @@ function stackStep() {
   if (!el.classList.contains('flipped')) return flipTop();
   // üstteki kartı kenara at
   st.busy = true;
+  SFX.play('whoosh');
   el.classList.add('thrown');
   addSeen(st.results[st.next]);
   setTimeout(() => {
@@ -647,6 +656,7 @@ function skipToSpecial() {
   if (isSpecial(cur) && !topEl().classList.contains('flipped')) return flipTop();
   let j = st.next + 1;
   while (j < st.results.length && !isSpecial(st.results[j])) j++;
+  SFX.play('whoosh');
   for (let i = st.next; i < j && i < st.results.length; i++) {
     const el = ov.querySelector(`#stack .card3d[data-i="${i}"]`);
     el.style.display = 'none';
@@ -915,7 +925,7 @@ function initBank() {
     if (b) {
       const k = b.dataset.sell === 'all' ? bankInfo(c).n : 1;
       const g = bankSell(c, k);
-      if (g) toast(`🏦 ${k} × ${esc(c.name)} satıldı: +${fmt(g)} jeton`);
+      if (g) { SFX.play(k > 1 ? 'coins' : 'coin'); toast(`🏦 ${k} × ${esc(c.name)} satıldı: +${fmt(g)} jeton`); }
       save(); updateHud(); renderBank();
     } else if (e.target.closest('.cimg')) openZoom(c);
   });
@@ -929,6 +939,7 @@ function initBank() {
     if (!n) return toast('Satılabilir kart yok.');
     if (!confirm(`Listedeki ${n} kart Pokébank'a satılacak. Kazanç: ${fmt(total)} jeton. Onaylıyor musun?`)) return;
     for (const x of list) bankSell(x.c, x.n);
+    SFX.play('coins');
     toast(`🏦 ${n} kart satıldı: +${fmt(total)} jeton`, 'gold');
     save(); updateHud(); renderBank();
   });
@@ -966,6 +977,14 @@ function renderBank() {
 // ================= Ayarlar =================
 function initSettings() {
   $('#optNoAnim').addEventListener('change', e => { S.settings.noanim = e.target.checked; applySettings(); save(); });
+  $('#optSound').addEventListener('change', e => { S.settings.muted = !e.target.checked; applySettings(); save(); });
+  $('#optVolume').addEventListener('input', e => {
+    S.settings.volume = +e.target.value;
+    $('#optVolumeVal').textContent = S.settings.volume;
+    applySettings(); save();
+  });
+  $('#optVolume').addEventListener('change', () => SFX.play('test'));
+  $('#soundTest').addEventListener('click', () => SFX.play('illus'));
   $('#exportBtn').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(S)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -996,11 +1015,21 @@ function resetGame() {
 }
 function renderSettings() {
   $('#optNoAnim').checked = !!S.settings.noanim;
+  $('#optSound').checked = !S.settings.muted;
+  $('#optVolume').value = S.settings.volume;
+  $('#optVolumeVal').textContent = S.settings.volume;
   const withPrice = CARDS.filter(c => c.price > 0).length;
   const illusSp = DEX.filter(sp => sp.mode === 'illus').length;
   $('#dataInfo').innerHTML = `Veri tarihi: <b>${esc(D.generated)}</b> · ${fmt(CARDS.length)} kart · ${SHOP_SETS.length} set · ${DEX.length} Pokémon (${illusSp} tanesinin illustration kartı var) · fiyatı bilinen kart: ${fmt(withPrice)}`;
 }
-function applySettings() { document.body.classList.toggle('noanim', !!S.settings.noanim); }
+function applySettings() {
+  document.body.classList.toggle('noanim', !!S.settings.noanim);
+  SFX.setVolume(S.settings.volume / 100);
+  SFX.setMuted(S.settings.muted);
+  const b = $('#hudMute');
+  b.textContent = S.settings.muted || !S.settings.volume ? '🔇' : '🔊';
+  b.title = S.settings.muted ? 'Sesi aç' : 'Sesi kapat';
+}
 
 // ================= İstatistikler =================
 function statBox(value, label, sub) {
@@ -1095,6 +1124,13 @@ document.addEventListener('keydown', e => {
 // ================= Başlat =================
 document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab); });
 $('#hudJob').addEventListener('click', () => showTab('job'));
+$('#hudMute').addEventListener('click', () => {
+  S.settings.muted = !S.settings.muted;
+  if (!S.settings.muted && !S.settings.volume) S.settings.volume = 60;
+  applySettings(); save();
+  if (currentTab === 'settings') renderSettings();
+  SFX.play('coin');
+});
 $('#jobList').addEventListener('click', e => { const b = e.target.closest('[data-job]'); if (b) switchJob(b.dataset.job); });
 $('#workBanner').addEventListener('click', e => { if (e.target.closest('[data-leave]')) leaveWork(); });
 $('#statsMain').addEventListener('click', e => {

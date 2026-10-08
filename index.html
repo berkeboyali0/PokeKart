@@ -19,6 +19,7 @@
     <button data-tab="settings">Ayarlar</button>
   </nav>
   <div class="hud">
+    <button class="pill pill-btn" id="hudMute" title="Sesi kapat">🔊</button>
     <button class="pill pill-btn" id="hudJob"><span>💼</span><b id="hudKasa">Boşta</b></button>
     <div class="pill coin" title="Jeton"><span class="coin-ico"></span><b id="hudCoins">0</b></div>
     <div class="dexbar" title="Pokédex tamamlama: illustration kartı (yoksa en değerli kartı) toplanan Pokémon">
@@ -137,6 +138,14 @@
     <div class="panel">
       <h2>Ayarlar</h2>
       <label class="check"><input type="checkbox" id="optNoAnim"> Animasyonları kapat (çok yavaş bilgisayarlar için)</label>
+      <h2>Ses</h2>
+      <label class="check"><input type="checkbox" id="optSound"> Ses efektleri açık</label>
+      <div class="vol-row">
+        <span>Ses seviyesi</span>
+        <input type="range" id="optVolume" min="0" max="100" step="5">
+        <b id="optVolumeVal">60</b>
+        <button class="btn" id="soundTest">Dene</button>
+      </div>
       <div class="btn-row">
         <button class="btn" id="exportBtn">Kaydı dışa aktar</button>
         <label class="btn">Kaydı içe aktar<input type="file" id="importFile" accept=".json" hidden></label>
@@ -155,6 +164,7 @@
 <div id="toasts"></div>
 
 <script src="data/cards.js"></script>
+<script src="sfx.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

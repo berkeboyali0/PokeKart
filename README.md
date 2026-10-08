@@ -27,6 +27,8 @@ Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oy
 
 **Pokébank.** Kart satmanın tek yolu. Common, uncommon ve $0.50 altı kartları almaz. Illustration ve Pokédex hedef kartlarının 1 kopyası her zaman sende kalır.
 
+**Ses efektleri.** Paket yırtma, kart kaydırma ve çevirme, özel kartlar için parıltı, illustration için zil, Special Illustration için fanfar, jeton ve seviye atlama sesleri. Sesler dosyadan çalınmaz, Web Audio API ile anlık üretilir. Ayarlar'dan ses seviyesi değiştirilebilir, üst bardaki 🔊 butonuyla tamamen kapatılabilir.
+
 **İstatistik.** Açılan paket ve kart sayısı, toplanan illustration kartlar, nesillere ve setlere göre ilerleme, kazanç ve çalışma süresi, en değerli kartların. En altta kaydı sıfırlama butonu var.
 
 ## Kayıt
@@ -53,6 +55,7 @@ Ekonomi (başlangıç jetonu, paket fiyatları, illustration çıkma oranları, 
 | Dosya | İçerik |
 |---|---|
 | `index.html`, `game.js`, `style.css` | Oyunun kendisi |
+| `sfx.js` | Ses efektleri (Web Audio) |
 | `data/cards.js` | Kart, set ve fiyat verisi (script tarafından üretilir) |
 | `veri-guncelle.bat`, `veri-cek.ps1` | Veriyi internetten yeniden indirir |
 | `docs/` | README ekran görüntüleri |
