@@ -146,15 +146,34 @@ for (let n = 1; n <= maxDex; n++) {
 const TARGET_IDS = new Set();
 for (const sp of DEX) for (const c of sp.targets) TARGET_IDS.add(c.id);
 
-// Trainer destesi: aynı trainer'ın farklı baskıları tek girişte toplanır
-// ("Professor's Research (Professor Oak)" ve "(Professor Sada)" -> "Professor's Research").
-// Hedef Pokédex ile aynı: illustration versiyonu, yoksa en değerli kart.
-const TRAINER_TYPES = { S: 'Supporter', I: 'Item', D: 'Stadium', T: 'Pokémon Tool' };
-const trainerKey = name => name.replace(/\s*\(.*\)\s*$/, '').trim();
+// Trainer destesi: üzerinde trainer karakterlerinin olduğu ÖZEL kartlar (Supporter'ların Full Art,
+// Rainbow/Gold ve Special Illustration versiyonları). Item/Tool/Stadium ve sıradan baskılar girmez.
+// Her giriş bir karakter: "Professor's Research (Professor Oak)" -> Professor Oak, "Cynthia's Ambition" -> Cynthia.
+// Karakterin herhangi bir özel kartını bulmak o girişi tamamlar.
+const TRAINER_TYPES = { SIR: 'Special Illustration', RB: 'Rainbow / Gold', FA: 'Full Art' };
+function trainerArtKind(c) {
+  if (c.st !== 1 || c.sub !== 'S') return null;
+  if (c.illus) return 'SIR';
+  if (/rainbow|secret|hyper|gold/i.test(c.rarity)) return 'RB';
+  if (/ultra/i.test(c.rarity)) return 'FA';
+  return null;
+}
+const SUPPORTER_NAMES = new Set(CARDS.filter(c => c.st === 1 && c.sub === 'S').map(c => c.name.replace(/\s*\(.*\)\s*$/, '').trim()));
+function trainerCharacter(name) {
+  const paren = name.match(/\(([^)]+)\)\s*$/);
+  if (paren) return paren[1].trim();
+  const team = name.match(/^Team \w+'s (.+)$/);
+  if (team) return team[1].trim();
+  const poss = name.match(/^([^']+)'s\s/);
+  if (poss && SUPPORTER_NAMES.has(poss[1])) return poss[1];
+  return name.trim();
+}
 const TRAINER_MAP = new Map();
 for (const c of CARDS) {
-  if (c.st !== 1) continue;
-  const k = trainerKey(c.name);
+  const kind = trainerArtKind(c);
+  if (!kind) continue;
+  c.artKind = kind;
+  const k = trainerCharacter(c.name);
   if (!TRAINER_MAP.has(k)) TRAINER_MAP.set(k, { name: k, cards: [] });
   TRAINER_MAP.get(k).cards.push(c);
 }
@@ -164,14 +183,10 @@ TRAINERS.forEach((t, i) => {
   t.i = i;
   t.cards.sort((a, b) => b.value - a.value);
   t.best = t.cards.find(c => c.price > 0) || t.cards[0];
-  const illus = t.cards.filter(c => c.illus);
-  t.mode = illus.length ? 'illus' : 'best';
-  t.targets = illus.length ? illus : [t.best];
-  const subs = {};
-  for (const c of t.cards) if (c.sub) subs[c.sub] = (subs[c.sub] || 0) + 1;
-  t.sub = Object.keys(subs).sort((a, b) => subs[b] - subs[a])[0] || '';
-  for (const c of t.cards) c.trainer = t;
-  for (const c of t.targets) TRAINER_TARGET_IDS.add(c.id);
+  t.targets = t.cards;                           // her özel kart hedeftir; biri yeter
+  t.kinds = new Set(t.cards.map(c => c.artKind));
+  t.sub = t.kinds.has('SIR') ? 'SIR' : t.kinds.has('RB') ? 'RB' : 'FA';
+  for (const c of t.cards) { c.trainer = t; TRAINER_TARGET_IDS.add(c.id); }
 });
 const isTargetCard = c => TARGET_IDS.has(c.id) || TRAINER_TARGET_IDS.has(c.id);
 
@@ -259,7 +274,6 @@ const isComplete = sp => sp.targets.some(c => S.owned[c.id]);
 const spState = sp => isComplete(sp) ? 2 : speciesOwned(sp) ? 1 : 0;
 const trainerOwned = t => t.cards.some(c => S.owned[c.id]);
 const isTrainerComplete = t => t.targets.some(c => S.owned[c.id]);
-const trState = t => isTrainerComplete(t) ? 2 : trainerOwned(t) ? 1 : 0;
 const cardCoins = c => Math.max(1, Math.round(c.value * CFG.SELL_PER_USD));
 const glow = v => v >= 100 ? 4 : v >= 20 ? 3 : v >= 5 ? 2 : v >= 1 ? 1 : 0;
 const isAbs = c => /^https?:/.test(c.img);
@@ -280,7 +294,7 @@ function addCard(c) {
     }
     const t = c.trainer;
     if (t) {
-      r.newTrainer = !trainerOwned(t);
+      r.newTrainer = false;   // trainer destesinde her özel kart hedeftir; "yeni" ile "hedef" aynı şey
       r.newTrainerTarget = t.targets.includes(c) && !isTrainerComplete(t);
     }
     S.got[c.id] = Date.now();
@@ -804,7 +818,9 @@ function tearPack() {
 }
 // Deste: kartlar üst üste gelir, en üstten tek tek açılır (tekli ve toplu açmada aynı).
 // Sıradan kartlar açık gelir; illustration / değerli / Pokédex hedefi kartlar kapalı gelir ve önce çevrilir.
-const isSpecial = r => r.c.illus || r.c.value >= 20 || r.newTarget.length > 0 || r.newTrainerTarget;
+// Kapalı ve parlayarak gelen kartlar: illustration, $20 üstü, trainer karakterlerinin özel kartları
+// ve Pokédex hedefi olan holo veya üstü kartlar (common/uncommon "en değerli kart" hedefleri özel sayılmaz).
+const isSpecial = r => r.c.illus || r.c.value >= 20 || !!r.c.trainer || (r.newTarget.length > 0 && r.c.tier >= 3);
 const STACK_DEPTH = 8;          // destede görünen kart kalınlığı
 const SEEN_MAX = 30;            // altta gösterilen geçilmiş kart sayısı
 function showCards() {
@@ -1150,7 +1166,7 @@ $('#modalBox').addEventListener('click', e => {
 
 // ================= Trainer destesi =================
 let trainerBuilt = false;
-const trainerShowcase = t => t.cards.find(c => c.illus && own(c.id)) || t.cards.find(c => own(c.id)) || null;
+const trainerShowcase = t => t.cards.find(c => own(c.id)) || null;   // kartlar değere göre sıralı
 function initTrainers() {
   ['trSearch', 'trFilter', 'trType'].forEach(id => $('#' + id).addEventListener('input', renderTrainers));
   $('#trGrid').addEventListener('click', e => {
@@ -1162,8 +1178,8 @@ function renderTrainers() {
   const grid = $('#trGrid');
   if (!trainerBuilt) {
     grid.innerHTML = TRAINERS.map(t => `<div class="dex-cell tr-cell" data-t="${t.i}">
-      <span class="dex-no">${esc(TRAINER_TYPES[t.sub] || 'Trainer')}</span>
-      <span class="dex-tag">${t.mode === 'illus' ? '<b class="tag-ir">IR</b>' : '<b class="tag-best">$</b>'}</span>
+      <span class="dex-no">${t.cards.length} özel kart</span>
+      <span class="dex-tag">${t.kinds.has('SIR') ? '<b class="tag-ir">SIR</b>' : t.kinds.has('RB') ? '<b class="tag-rb">GOLD</b>' : '<b class="tag-best">FA</b>'}</span>
       <div class="dex-art"><img loading="lazy" src="${imgSmall(t.best)}" alt=""></div>
       <span class="dex-name" title="${esc(t.name)}">${esc(t.name)}</span>
       <span class="dex-val"></span></div>`).join('');
@@ -1171,55 +1187,45 @@ function renderTrainers() {
   }
   const q = $('#trSearch').value.trim().toLowerCase(), f = $('#trFilter').value, type = $('#trType').value;
   const cells = grid.children;
-  let shown = 0, done = 0, owned = 0;
+  let shown = 0, done = 0;
   for (let i = 0; i < TRAINERS.length; i++) {
-    const t = TRAINERS[i], st = trState(t), cell = cells[i];
-    if (st) owned++;
-    if (st === 2) done++;
+    const t = TRAINERS[i], st = isTrainerComplete(t) ? 2 : 0, cell = cells[i];
+    if (st) done++;
     cell.className = 'dex-cell tr-cell s' + st;
     const dc = trainerShowcase(t), key = dc ? dc.id : '';
     if (cell.dataset.shown !== key) {
       cell.dataset.shown = key;
       cell.querySelector('.dex-art img').src = imgSmall(dc || t.best);
-      cell.querySelector('.dex-val').textContent = dc
-        ? `${dc.illus ? (dc.sir ? 'Special Illus.' : 'Illustration') : dc.rarity} · ${usd(dc.value)}`
-        : (t.mode === 'illus' ? `${t.targets.length} illustration` : `en değerli: ${usd(t.best.value)}`);
+      cell.querySelector('.dex-val').textContent = dc ? `${TRAINER_TYPES[dc.artKind]} · ${usd(dc.value)}` : `en değerli: ${usd(t.best.value)}`;
     }
     cell.classList.toggle('has-card', !!dc);
     let vis = true;
-    if (q && !t.name.toLowerCase().includes(q)) vis = false;
-    if (type && t.sub !== type) vis = false;
-    if (f === 'missing' && st !== 0) vis = false;
-    if (f === 'owned' && st !== 1) vis = false;
-    if (f === 'master' && st !== 2) vis = false;
-    if (f === 'illus' && t.mode !== 'illus') vis = false;
+    if (q && !t.name.toLowerCase().includes(q) && !t.cards.some(c => c.name.toLowerCase().includes(q))) vis = false;
+    if (type && !t.kinds.has(type)) vis = false;
+    if (f === 'missing' && st) vis = false;
+    if (f === 'master' && !st) vis = false;
     cell.style.display = vis ? '' : 'none';
     if (vis) shown++;
   }
+  const allCards = TRAINERS.reduce((s, t) => s + t.cards.length, 0);
+  const ownedCards = TRAINERS.reduce((s, t) => s + t.cards.filter(c => own(c.id)).length, 0);
   $('#trCount').textContent = `${shown} trainer gösteriliyor`;
   $('#trProgress').innerHTML = `
-    <div class="stat"><b>${done}/${TRAINERS.length}</b><span>tamamlanan trainer</span></div>
-    <div class="stat"><b>${owned}/${TRAINERS.length}</b><span>en az bir kartı olan</span></div>
-    <div class="stat"><b>${TRAINERS.filter(t => t.mode === 'illus' && isTrainerComplete(t)).length}/${TRAINERS.filter(t => t.mode === 'illus').length}</b><span>illustration ile tamamlanan</span></div>`;
+    <div class="stat"><b>${done}/${TRAINERS.length}</b><span>toplanan trainer</span></div>
+    <div class="stat"><b>${ownedCards}/${allCards}</b><span>farklı özel trainer kartı</span></div>
+    <div class="stat"><b>${TRAINERS.filter(t => t.cards.some(c => c.artKind === 'SIR' && own(c.id))).length}</b><span>Special Illustration'ı olan trainer</span></div>`;
 }
 function openTrainer(i) {
-  const t = TRAINERS[i], st = trState(t);
-  const chips = ['Kartı yok', 'Kartı var · hedef eksik', '★ Destede tamamlandı'];
+  const t = TRAINERS[i], done = isTrainerComplete(t);
   const packBtn = c2 => `<button class="btn" data-openset="${c2.set.i}" title="${esc(c2.set.name)} paketi aç">Paket</button>`;
-  const others = t.cards.filter(c => !t.targets.includes(c));
-  const head = t.mode === 'illus'
-    ? `<h3 style="color:var(--gold)">★ Hedef: illustration kartlarından herhangi biri (${t.targets.filter(c => own(c.id)).length}/${t.targets.length} sende)</h3>
-       <p class="muted">Bu kartlar paketlerdeki özel illustration slotundan çıkar.</p>`
-    : `<h3 style="color:var(--gold)">★ Hedef: en değerli kart</h3>
-       <p class="muted">Bu trainer'ın illustration kartı yok, bu yüzden hedef en değerli kartı.</p>`;
+  const groups = ['SIR', 'RB', 'FA'].map(k => [k, t.cards.filter(c => c.artKind === k)]).filter(([, l]) => l.length);
   $('#modalBox').innerHTML = `<button class="close-x" data-close>×</button>
-    <div class="sp-head"><div><div class="muted">${esc(TRAINER_TYPES[t.sub] || 'Trainer')}</div><h2>${esc(t.name)}</h2>
-      <span class="chip c${st}">${chips[st]}</span> <span class="muted">${t.cards.filter(c => own(c.id)).length}/${t.cards.length} kartı sende</span></div></div>
-    <div class="sp-best" style="display:block">${head}
-      <div class="card-grid">${t.targets.map(c => miniCard(c, { showOne: true, action: packBtn })).join('')}</div>
-    </div>
-    ${others.length ? `<h3>Diğer baskıları (${others.length}) <span class="muted" style="font-weight:400;font-size:13px">değere göre</span></h3>
-    <div class="card-grid">${others.map(c => miniCard(c, { showOne: true, action: packBtn })).join('')}</div>` : ''}`;
+    <div class="sp-head"><div><div class="muted">Trainer</div><h2>${esc(t.name)}</h2>
+      <span class="chip c${done ? 2 : 0}">${done ? '★ Destede' : 'Henüz özel kartı yok'}</span>
+      <span class="muted">${t.cards.filter(c => own(c.id)).length}/${t.cards.length} özel kartı sende</span></div></div>
+    <p class="muted">Bu karakterin herhangi bir özel kartını bulmak onu trainer destene ekler. Hepsini toplamak da senin elinde.</p>
+    ${groups.map(([k, list]) => `<h3>${TRAINER_TYPES[k]} (${list.length})</h3>
+      <div class="card-grid">${list.map(c => miniCard(c, { showOne: true, action: packBtn })).join('')}</div>`).join('')}`;
   modal.classList.remove('hidden');
   modal.scrollTop = 0;
 }
@@ -1545,10 +1551,10 @@ function renderStats() {
     </div>
     <h3>Trainer destesi</h3>
     <div class="coll-stats">
-      ${statBox(`${TRAINERS.filter(isTrainerComplete).length}/${TRAINERS.length}`, 'tamamlanan trainer')}
-      ${statBox(`${TRAINERS.filter(t => t.mode === 'illus' && isTrainerComplete(t)).length}/${TRAINERS.filter(t => t.mode === 'illus').length}`, 'illustration ile tamamlanan')}
-      ${statBox(`${TRAINERS.filter(trainerOwned).length}/${TRAINERS.length}`, 'en az bir kartı olan')}
-      ${statBox(`${fmt(ownedCards.filter(c => c.st === 1).length)}/${fmt(CARDS.filter(c => c.st === 1).length)}`, 'farklı trainer kartı')}
+      ${statBox(`${TRAINERS.filter(isTrainerComplete).length}/${TRAINERS.length}`, 'toplanan trainer')}
+      ${statBox(`${fmt(ownedCards.filter(c => c.trainer).length)}/${fmt(TRAINERS.reduce((s, t) => s + t.cards.length, 0))}`, 'farklı özel trainer kartı')}
+      ${statBox(`${fmt(ownedCards.filter(c => c.artKind === 'SIR').length)}/${fmt(CARDS.filter(c => c.artKind === 'SIR').length)}`, 'Special Illustration trainer')}
+      ${statBox(`${fmt(ownedCards.filter(c => c.artKind === 'FA' || c.artKind === 'RB').length)}/${fmt(CARDS.filter(c => c.artKind === 'FA' || c.artKind === 'RB').length)}`, 'Full Art / Gold trainer')}
     </div>
     <h3>Koleksiyon</h3>
     <div class="coll-stats">
@@ -1598,7 +1604,7 @@ const INTRO_STEPS = [
     <p>Bir sete tıklayınca o setten çıkabilecek <b>eksik hedef kartlarını</b> görürsün; hangi paketi açacağını buna göre seç.</p>` },
   { icon: '📖', title: 'Pokédex ve Trainer Destesi', body: `
     <p><b>Pokédex</b>: siyah silüetler henüz kartı olmayan Pokémon'lar, mavi çerçeveliler kartı olan ama hedefi eksik olanlar, <b>altın</b> çerçeveliler tamamlananlar. <span class="tag-ir">IR</span> hedefi illustration, <span class="tag-best">$</span> hedefi en değerli kart demek. Bir Pokémon'a tıklayınca hedef kartlarını ve hangi sette olduklarını görürsün.</p>
-    <p><b>Trainer Destesi</b>: Supporter, Item, Stadium ve Tool kartları burada aynı mantıkla toplanır.</p>` },
+    <p><b>Trainer Destesi</b>: üzerinde trainer karakterlerinin olduğu özel kartlar (Iono, Lillie, Cynthia gibi Supporter'ların Full Art, Gold ve Special Illustration versiyonları) burada toplanır. Bir karakterin herhangi bir özel kartını bulunca destene eklenir.</p>` },
   { icon: '💰', title: 'Para kazan', body: `
     <p><b>İş</b> sekmesi bir clicker: Pokémon'a tıkla, jeton kazan. Hızlı tıklamak kombo yapar. Kazandığınla <b>yardımcılar</b> al; oyun kapalıyken bile senin için çalışırlar. Ara ara çıkan ✨ <b>shiny Pokémon</b>'u kaçırma!</p>
     <p>Clicker parası <b>cüzdan kapasitesine</b> kadar birikir; cüzdanı büyütmek için para ve Pokédex ilerlemesi gerekir.</p>

@@ -607,3 +607,7 @@ body.noanim *, body.noanim *::before, body.noanim *::after { animation: none !im
 .intro-dots span.on { background: var(--yellow); }
 .credit { background: #2a2715; border: 1px solid #6b5a1c; border-radius: 10px; padding: 10px 14px; margin-top: 12px; color: #ffe9a8; line-height: 1.5; }
 .credit a { color: var(--yellow); }
+.tag-rb { display: inline-block; font-size: 10px; font-weight: 800; padding: 0 5px; border-radius: 4px; background: linear-gradient(90deg, #f5c542, #fff1a8, #f5c542); color: #3a2a00; }
+#hudHelp, #hudMute { padding: 6px 8px; font-size: 14px; }
+.hud { gap: 6px; }
+.dexbar { width: 160px; }

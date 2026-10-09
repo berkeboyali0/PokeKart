@@ -75,21 +75,18 @@
       <input id="trSearch" type="search" placeholder="Trainer ara...">
       <select id="trFilter">
         <option value="all">Tümü</option>
-        <option value="missing">Hiç kartı olmayanlar</option>
-        <option value="owned">Kartı var ama hedefi eksik</option>
+        <option value="missing">Henüz toplanmayanlar</option>
         <option value="master">Tamamlananlar</option>
-        <option value="illus">Hedefi illustration olanlar</option>
       </select>
       <select id="trType">
-        <option value="">Tüm türler</option>
-        <option value="S">Supporter</option>
-        <option value="I">Item</option>
-        <option value="D">Stadium</option>
-        <option value="T">Pokémon Tool</option>
+        <option value="">Tüm kart çeşitleri</option>
+        <option value="SIR">Special Illustration</option>
+        <option value="RB">Rainbow / Gold</option>
+        <option value="FA">Full Art</option>
       </select>
       <span class="muted" id="trCount"></span>
     </div>
-    <p class="muted" style="margin:-4px 0 12px">Trainer kartları burada birikir. Aynı trainer'ın farklı baskıları tek girişte toplanır; hedef illustration versiyonu, yoksa en değerli kartı.</p>
+    <p class="muted" style="margin:-4px 0 12px">Üzerinde trainer karakterlerinin olduğu özel kartlar burada birikir: Supporter'ların Full Art, Rainbow / Gold ve Special Illustration versiyonları. Her giriş bir karakter; o karakterin herhangi bir özel kartını bulunca destene eklenir.</p>
     <div id="trGrid" class="dex-grid"></div>
   </section>
 
