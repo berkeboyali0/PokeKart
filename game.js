@@ -234,7 +234,7 @@ function newState() {
     clicker: { helpers: {}, upgrades: {}, ts: Date.now() },
     profile: { name: 'Antrenör', avatar: 25, shiny: false, since: Date.now() },
     stats: { packs: 0, cardsOpened: 0, illusPulled: 0, sirPulled: 0, earned: 0, salary: 0, clicks: 0, clickEarned: 0, idleEarned: 0, shinies: 0, bestPull: null, godPacks: 0 },
-    settings: { noanim: false, volume: 60, muted: false } };
+    settings: { noanim: false, volume: 60, muted: false, hideSkip: false } };
 }
 function loadState(d) {
   const st = Object.assign(newState(), d);
@@ -836,12 +836,12 @@ function showCards() {
     <div class="stack-area" id="stack">${results.map((r, i) => cardHtml(r, i, false)).join('')}</div>
     <div class="seen-row ${n > 10 ? 'small' : ''}" id="seenRow"></div>
     <div class="reveal-bar">
-      <button class="btn" id="skipSpecial">Özel karta atla ⏭</button>
+      ${S.settings.hideSkip ? '' : '<button class="btn" id="skipSpecial">Özel karta atla ⏭</button>'}
       <button class="btn" id="skipAll">Hepsini göster</button>
     </div>`;
   ov.querySelectorAll('#stack .card3d').forEach((el, i) => { el.style.zIndex = n - i; });
   $('#stack').addEventListener('click', stackStep);
-  $('#skipSpecial').addEventListener('click', skipToSpecial);
+  if ($('#skipSpecial')) $('#skipSpecial').addEventListener('click', skipToSpecial);
   $('#skipAll').addEventListener('click', finishReveal);
   activateTop();
 }
@@ -867,7 +867,7 @@ function activateTop() {
   const st = revealState, r = st.results[st.next], el = topEl();
   layoutStack();
   const hasSpecialAhead = st.results.some((x, i) => i > st.next && isSpecial(x));
-  $('#skipSpecial').disabled = !hasSpecialAhead && !isSpecial(r);
+  if ($('#skipSpecial')) $('#skipSpecial').disabled = !hasSpecialAhead && !isSpecial(r);
   if (isSpecial(r)) {
     el.classList.add('special');
     SFX.play('specialReady');
@@ -1365,6 +1365,7 @@ function renderBank() {
 // ================= Ayarlar =================
 function initSettings() {
   $('#optNoAnim').addEventListener('change', e => { S.settings.noanim = e.target.checked; applySettings(); save(); });
+  $('#optHideSkip').addEventListener('change', e => { S.settings.hideSkip = e.target.checked; save(); });
   $('#optSound').addEventListener('change', e => { S.settings.muted = !e.target.checked; applySettings(); save(); });
   $('#optVolume').addEventListener('input', e => {
     S.settings.volume = +e.target.value;
@@ -1403,6 +1404,7 @@ function resetGame() {
 }
 function renderSettings() {
   $('#optNoAnim').checked = !!S.settings.noanim;
+  $('#optHideSkip').checked = !!S.settings.hideSkip;
   $('#optSound').checked = !S.settings.muted;
   $('#optVolume').value = S.settings.volume;
   $('#optVolumeVal').textContent = S.settings.volume;

@@ -21,7 +21,7 @@ Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oy
 | ![Deste](docs/deste.png) | ![Pokédex](docs/pokedex.png) |
 | ![İş](docs/is.png) | ![İstatistik](docs/istatistik.png) |
 
-**Paket açma.** Her set ayrı bir paket. Mağazada bir sete tıklayınca o setten çıkabilen eksik hedef kartlarını (Pokédex ve Trainer Destesi), toplanmış hedefleri ve istersen setin tüm kartlarını görürsün. Paket yırtılınca kartlar deste olarak gelir ve en üstten tek tek açılır. Illustration kartlar ve değerli kartlar kapalı gelir, önce çevrilmeleri gerekir. 10'lu açmada 100 kartlık deste gelir; "Özel karta atla" butonu sıradan kartları geçer.
+**Paket açma.** Her set ayrı bir paket. Mağazada bir sete tıklayınca o setten çıkabilen eksik hedef kartlarını (Pokédex ve Trainer Destesi), toplanmış hedefleri ve istersen setin tüm kartlarını görürsün. Paket yırtılınca kartlar deste olarak gelir ve en üstten tek tek açılır. Illustration kartlar ve değerli kartlar kapalı gelir, önce çevrilmeleri gerekir. 10'lu açmada 100 kartlık deste gelir; "Özel karta atla" butonu sıradan kartları geçer (istersen Ayarlar'dan bu butonu tamamen kapatabilirsin).
 
 **Pokédex.** Hedef, her Pokémon'un Illustration Rare ya da Special Illustration Rare kartlarından birini bulmak. Illustration kartı olmayan Pokémon'larda hedef, o Pokémon'un en değerli kartı. Bulunan Pokémon'un hücresinde kartı sergilenir. Bir Pokémon'a tıklayınca hedef kartların hangi setlerde olduğu görünür.
 
