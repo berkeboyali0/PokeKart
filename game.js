@@ -805,7 +805,7 @@ function showPack(set, packs, god) {
         <div class="pack-body">${set.logo ? `<img src="${esc(set.logo)}" alt="">` : ''}<span class="ball"></span><div class="pack-name">${esc(set.name)}${multi ? `<br>x${packs.length}` : ''}</div></div>
       </div>
     </div>
-    <div class="open-hint">Tıkla veya Boşluk tuşuna bas</div>`;
+    <div class="open-hint">${IS_TOUCH ? 'Açmak için dokun' : 'Tıkla veya Boşluk tuşuna bas'}</div>`;
   revealState = { set, results, packs, packOf, god, stage: 'pack' };
   $('#packWrap').addEventListener('click', tearPack);
 }
@@ -820,6 +820,9 @@ function tearPack() {
 // Sıradan kartlar açık gelir; illustration / değerli / Pokédex hedefi kartlar kapalı gelir ve önce çevrilir.
 // Kapalı ve parlayarak gelen kartlar: illustration, $20 üstü, trainer karakterlerinin özel kartları
 // ve Pokédex hedefi olan holo veya üstü kartlar (common/uncommon "en değerli kart" hedefleri özel sayılmaz).
+// Dokunmatik cihazlarda klavye ipuçları yerine "dokun" yazılır
+const IS_TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+const NEXT_HINT = IS_TOUCH ? 'Sonraki kart için dokun' : 'Sonraki kart için tıkla veya Boşluk';
 const isSpecial = r => r.c.illus || r.c.value >= 20 || !!r.c.trainer || (r.newTarget.length > 0 && r.c.tier >= 3);
 const STACK_DEPTH = 8;          // destede görünen kart kalınlığı
 const SEEN_MAX = 30;            // altta gösterilen geçilmiş kart sayısı
@@ -871,7 +874,7 @@ function activateTop() {
     hint('✨ Özel bir kart! Çevirmek için tıkla');
   } else {
     flipTop();
-    hint('Sonraki kart için tıkla veya Boşluk');
+    hint(NEXT_HINT);
   }
 }
 function announce(i) {
@@ -891,7 +894,7 @@ function flipTop() {
   SFX.play(r.c.sir ? 'sir' : r.c.illus ? 'illus' : isSpecial(r) ? 'special' : r.c.value >= 5 ? 'rare' : 'flip');
   if (isSpecial(r) && !S.settings.noanim) setTimeout(() => el.classList.add('burst'), 250);
   announce(st.next);
-  if (isSpecial(r)) hint('Sonraki kart için tıkla veya Boşluk');
+  if (isSpecial(r)) hint(NEXT_HINT);
 }
 function addSeen(r) {
   const row = $('#seenRow');

@@ -611,3 +611,108 @@ body.noanim *, body.noanim *::before, body.noanim *::after { animation: none !im
 #hudHelp, #hudMute { padding: 6px 8px; font-size: 14px; }
 .hud { gap: 6px; }
 .dexbar { width: 160px; }
+
+/* =================== Mobil uyum =================== */
+/* Dokunmatik: hızlı dokunuşlarda yakınlaştırma / 300ms gecikme olmasın (clicker için önemli) */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+* { -webkit-tap-highlight-color: transparent; }
+.work-scene, .stack-area, .card3d, .pack-wrap, button { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+
+@media (max-width: 760px) {
+  html, body { overflow-x: hidden; }
+  body { font-size: 13.5px; }
+
+  /* Üst bar: 1. satır logo + kısayollar + iş + jeton, 2. satır Pokédex çubuğu, 3. satır kaydırılabilir sekmeler */
+  .topbar { padding: 8px 10px 0; gap: 6px; }
+  .brand { font-size: 0; gap: 0; }
+  .brand .ball { width: 26px; height: 26px; }
+  .hud { order: 2; flex: 1; margin-left: 0; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
+  .hud .pill { padding: 5px 9px; font-size: 13px; }
+  #hudHelp, #hudMute { padding: 5px 7px; }
+  .hud-profile { padding: 2px 3px; }
+  .hud-profile img { width: 26px; height: 26px; }
+  .coin b { font-size: 14px; }
+  .dexbar { flex-basis: 100%; width: auto; order: 9; }
+  .dexbar-text { font-size: 11px; }
+  .tabs {
+    order: 3; flex-basis: 100%; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 2px;
+    margin: 0 -10px; padding: 0 10px 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { white-space: nowrap; flex: none; padding: 8px 11px; font-size: 14px; }
+
+  main { padding: 12px 10px 50px; }
+
+  /* araç çubukları: arama tam genişlik, seçimler yan yana */
+  .toolbar { gap: 8px; }
+  .toolbar input[type=search] { min-width: 0; flex: 1 1 100%; }
+  .toolbar select { flex: 1 1 45%; min-width: 0; }
+  .toolbar .btn { flex: 1 1 auto; }
+
+  /* ızgaralar */
+  .set-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .set-card { padding: 9px; }
+  .set-logo { height: 54px; }
+  .set-logo img { max-height: 54px; }
+  .set-name { font-size: 14px; }
+  .set-btns .btn { padding: 7px 8px; }
+  .dex-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+  .dex-cell .dex-art img { width: 64px; height: 64px; }
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .ccard { padding: 6px; }
+  .coll-stats { gap: 8px; }
+  .stat { padding: 8px 12px; flex: 1 1 40%; }
+  .stat b { font-size: 17px; }
+  .legend { flex-wrap: wrap; }
+
+  /* pencereler */
+  #modal { padding: 10px 6px; }
+  .modal-box { padding: 14px 12px; border-radius: 12px; }
+  .sp-head img { width: 72px; height: 72px; }
+  .sp-head h2 { font-size: 20px; }
+  .set-head img { max-width: 160px; max-height: 70px; }
+  .bank-head { padding: 12px 14px; }
+  .panel { padding: 14px 16px; }
+
+  /* paket açma */
+  #opening { padding: 12px 10px; }
+  .open-title { font-size: 16px; margin-bottom: 12px; }
+  .stack-area { width: min(270px, 74vw); }
+  .reveal-bar { margin-top: 20px; gap: 8px; }
+  .seen-row { margin-top: 20px; }
+  .bulk-box .reveal-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+
+  /* büyük kart görünümü ekrana sığsın */
+  .zoom-card { height: auto; width: min(88vw, 420px); }
+  .zoom-info { font-size: 13px; padding: 0 10px; }
+
+  /* iş (clicker) */
+  .work-scene.big { height: 270px; }
+  .mascot { width: 120px; height: 120px; }
+  .clicker-stats .stat b { font-size: 15px; }
+  .helper { flex-wrap: wrap; }
+  .helper .h-info { min-width: 140px; }
+  .h-buy { width: 100%; justify-content: flex-end; }
+  .upgrade-list { grid-template-columns: 1fr; }
+
+  /* trainer (profil) */
+  .profile-card { padding: 14px; gap: 14px; justify-content: center; text-align: center; }
+  .pf-info { min-width: 0; align-items: center; }
+  .pf-name { max-width: 100%; text-align: center; }
+  .avatar-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .ao-main img { width: 60px; height: 60px; }
+  .stats-cols { grid-template-columns: 1fr; }
+  .prow { grid-template-columns: 96px 1fr 84px; gap: 6px; font-size: 12px; }
+
+  /* rehber */
+  .intro-box { padding: 20px 16px 16px; }
+  .intro-icon { font-size: 42px; }
+  .intro-body { min-height: 0; font-size: 13.5px; }
+
+  #toasts { left: 10px; right: 10px; bottom: 10px; align-items: stretch; }
+  .toast { max-width: none; }
+}
+@media (max-width: 760px) {
+  .topbar { align-items: flex-start; }
+  .brand { padding-top: 5px; }
+}

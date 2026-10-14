@@ -39,6 +39,26 @@ Tarayıcıda çalışan, kurulum gerektirmeyen bir Pokémon kart paketi açma oy
 
 **İstatistikler (Trainer sekmesinde).** Açılan paket ve kart sayısı, toplanan illustration kartlar, nesillere ve setlere göre ilerleme, kazanç ve çalışma süresi, en değerli kartların. En altta kaydı sıfırlama butonu var.
 
+## Mobilde oynamak
+
+Oyun telefonda da oynanır, hiçbir şey kurmana gerek yok.
+
+1. Telefonunun tarayıcısında **https://berkeboyali0.github.io/PokeKart/** adresini aç.
+2. İstersen ana ekrana ekle, uygulama gibi tek dokunuşla açılsın:
+   - **iPhone (Safari):** Paylaş butonu → **Ana Ekrana Ekle**
+   - **Android (Chrome):** sağ üstteki **⋮** menüsü → **Ana ekrana ekle**
+
+**Telefonda kontroller**
+
+- Sekmeler ekranın üstünde; diğer sekmeleri görmek için şeridi parmağınla **yana kaydır**.
+- Paket açarken desteye **dokunarak** kartları tek tek aç; özel kartlar önce dokununca çevrilir.
+- **İş** sekmesinde Pokémon'a hızlı hızlı dokun; çift dokunmada ekran yakınlaşmaz.
+- Bir karta dokununca büyük hali açılır, kapatmak için tekrar dokun.
+
+**Kaydın cihaza özeldir.** İlerleme her cihazın kendi tarayıcısında saklanır. Bilgisayarda oynadığın kaydı telefona taşımak için bilgisayarda **Ayarlar → Kaydı dışa aktar** ile bir `.json` dosyası indir, bu dosyayı telefonuna gönder ve telefonda **Ayarlar → Kaydı içe aktar** ile yükle. Telefondan bilgisayara da aynı şekilde taşıyabilirsin.
+
+Oynarken internet bağlantısı gerekir; kart görselleri ve Pokémon animasyonları internetten yüklenir.
+
 ## Kayıt
 
 İlerleme tarayıcıda (localStorage) saklanır. Başka bir bilgisayara taşımak için Ayarlar > Kaydı dışa aktar / içe aktar. Tarayıcı verilerini silersen kayıt da silinir.
