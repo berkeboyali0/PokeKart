@@ -716,3 +716,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .topbar { align-items: flex-start; }
   .brand { padding-top: 5px; }
 }
+
+/* Ayarlar: her seçenek kendi satırında */
+.panel > .check { display: flex; width: fit-content; margin: 8px 0; }
