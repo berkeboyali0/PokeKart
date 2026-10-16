@@ -233,6 +233,7 @@ function newState() {
   return { coins: CFG.START_COINS, owned: {}, got: {},
     clicker: { helpers: {}, upgrades: {}, ts: Date.now() },
     profile: { name: 'Antrenör', avatar: 25, shiny: false, since: Date.now() },
+    covers: {},                 // Pokédex kapak seçimleri: { pokédexNo: kartId }
     stats: { packs: 0, cardsOpened: 0, illusPulled: 0, sirPulled: 0, earned: 0, salary: 0, clicks: 0, clickEarned: 0, idleEarned: 0, shinies: 0, bestPull: null, godPacks: 0 },
     settings: { noanim: false, volume: 60, muted: false, hideSkip: false } };
 }
@@ -240,6 +241,7 @@ function loadState(d) {
   const st = Object.assign(newState(), d);
   st.clicker = Object.assign(newState().clicker, d.clicker || {});
   st.profile = Object.assign(newState().profile, d.profile || {});
+  st.covers = Object.assign({}, d.covers || {});
   st.stats = Object.assign(newState().stats, d.stats || {});
   st.settings = Object.assign(newState().settings, d.settings || {});
   delete st.freePacks; delete st.freeTs; delete st.lastDaily;
@@ -1021,8 +1023,15 @@ function initDex() {
     if (cell) openSpecies(+cell.dataset.n);
   });
 }
+// Pokédex kapağı: sende illustration kartı varsa sadece onlar arasından, yoksa sahip olduğun kartlardan.
+// Varsayılan en değerlisi; oyuncu Pokémon penceresinden başka bir kartı kapak yapabilir.
+function coverPool(sp) {
+  const illus = sp.cards.filter(c => c.illus && own(c.id));
+  return illus.length ? illus : sp.cards.filter(c => own(c.id));   // kartlar değere göre sıralı
+}
 function showcaseCard(sp) {
-  return sp.cards.find(c => c.illus && own(c.id)) || sp.cards.find(c => own(c.id)) || null;   // kartlar değere göre sıralı
+  const pool = coverPool(sp);
+  return pool.find(c => c.id === S.covers[sp.n]) || pool[0] || null;
 }
 function renderDex() {
   const grid = $('#dexGrid');
@@ -1139,8 +1148,19 @@ function openSpecies(n) {
   const st = spState(sp);
   const chips = ['Kartı yok', 'Kartı var · hedef eksik', '★ Pokédex tamamlandı'];
   const ownedCount = sp.cards.filter(c => own(c.id)).length;
-  const packBtn = c2 => `<button class="btn" data-openset="${c2.set.i}" title="${esc(c2.set.name)} paketi aç">Paket</button>`;
+  const pool = coverPool(sp), cover = showcaseCard(sp);
+  // kapak olabilecek kartlarda "Kapak yap" butonu, diğerlerinde paket butonu
+  const packBtn = c2 => c2 === cover
+    ? '<span class="cover-on">✓ Kapak</span>'
+    : pool.includes(c2)
+      ? `<button class="btn cover-btn" data-cover="${esc(c2.id)}" data-n="${sp.n}" title="Pokédex'te bu kart görünsün">Kapak yap</button>`
+      : `<button class="btn" data-openset="${c2.set.i}" title="${esc(c2.set.name)} paketi aç">Paket</button>`;
   const others = sp.cards.filter(c => !sp.targets.includes(c));
+  const coverNote = cover
+    ? `<p class="cover-note">🖼️ Pokédex kapağı: <b>${esc(cover.name)}</b> (${esc(cover.rarity)}). ${pool.length > 1
+        ? `Değiştirmek için ${pool[0].illus ? 'illustration kartlarından' : 'kartlarından'} birinin altındaki <b>Kapak yap</b> butonuna bas.`
+        : ''}${pool[0].illus ? '' : ' Bir illustration kartı bulunca kapak sadece illustration kartlarından seçilir.'}</p>`
+    : '';
   const head = sp.mode === 'illus'
     ? `<h3 style="color:var(--gold)">★ Hedef: illustration kartlarından herhangi biri (${sp.targets.filter(c => own(c.id)).length}/${sp.targets.length} sende)</h3>
        <p class="muted">Bu kartlar paketlerdeki özel illustration slotundan çıkar (Illustration Rare ~1/${Math.round(1 / CFG.ILLUS_RATE)}, Special ~1/${Math.round(1 / CFG.SPECIAL_ILLUS_RATE)} paket).</p>`
@@ -1150,6 +1170,7 @@ function openSpecies(n) {
     <div class="sp-head"><img src="${CFG.SPRITE(sp.n)}" alt="">
       <div><div class="muted">#${String(sp.n).padStart(4, '0')}</div><h2>${esc(sp.name)}</h2>
       <span class="chip c${st}">${chips[st]}</span> <span class="muted">${ownedCount}/${sp.cards.length} kartı sende</span></div></div>
+    ${coverNote}
     <div class="sp-best" style="display:block">${head}
       <div class="card-grid">${sp.targets.map(c => miniCard(c, { showOne: true, action: packBtn })).join('')}</div>
     </div>
@@ -1163,6 +1184,17 @@ $('#modalBox').addEventListener('click', e => {
   const os = e.target.closest('[data-openset]');
   if (os) { closeModal(); return openPacks(SETS[+os.dataset.openset], +os.dataset.n || 1); }
   if (e.target.closest('[data-showall]')) { setModalAll = !setModalAll; return openSetModal(SETS[+e.target.closest('[data-showall]').dataset.showall]); }
+  const cv = e.target.closest('[data-cover]');
+  if (cv) {
+    const n = +cv.dataset.n, top = modal.scrollTop;
+    S.covers[n] = cv.dataset.cover;
+    save();
+    SFX.play('coin');
+    openSpecies(n);
+    modal.scrollTop = top;   // pencere yerinde kalsın
+    if (dexBuilt) renderDex();
+    return;
+  }
   const z = e.target.closest('.cimg');
   if (z) openZoom(BY_ID.get(z.closest('.ccard').dataset.id));
 });

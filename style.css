@@ -719,3 +719,9 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 
 /* Ayarlar: her seçenek kendi satırında */
 .panel > .check { display: flex; width: fit-content; margin: 8px 0; }
+
+/* Pokédex kapak seçimi */
+.cover-note { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 0 0 12px; font-size: 13px; }
+.cover-btn { border-color: #6b5a1c; color: var(--gold); }
+.cover-btn:hover { background: #3a3212; }
+.cover-on { font-size: 12px; font-weight: 800; color: #222; background: var(--gold); border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
