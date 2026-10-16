@@ -725,3 +725,5 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .cover-btn { border-color: #6b5a1c; color: var(--gold); }
 .cover-btn:hover { background: #3a3212; }
 .cover-on { font-size: 12px; font-weight: 800; color: #222; background: var(--gold); border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
+/* Kapak boşsa (illustration kartı sende değil) hücre boş görünür: silüet, kartın varsa mavi çerçeve */
+.dex-cell:not(.tr-cell):not(.has-card) .dex-art img { filter: brightness(0); opacity: .35; }

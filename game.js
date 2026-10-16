@@ -1023,11 +1023,12 @@ function initDex() {
     if (cell) openSpecies(+cell.dataset.n);
   });
 }
-// Pokédex kapağı: sende illustration kartı varsa sadece onlar arasından, yoksa sahip olduğun kartlardan.
+// Pokédex kapağı: Pokémon'un illustration kartı varsa kapak sadece sendeki illustration kartlarından olur
+// (hiçbiri sende değilse kapak boş kalır). Illustration kartı hiç yoksa sahip olduğun kartlardan olur.
 // Varsayılan en değerlisi; oyuncu Pokémon penceresinden başka bir kartı kapak yapabilir.
 function coverPool(sp) {
-  const illus = sp.cards.filter(c => c.illus && own(c.id));
-  return illus.length ? illus : sp.cards.filter(c => own(c.id));   // kartlar değere göre sıralı
+  if (sp.mode === 'illus') return sp.cards.filter(c => c.illus && own(c.id));   // hiçbiri sende değilse boş = boş kapak
+  return sp.cards.filter(c => own(c.id));   // kartlar değere göre sıralı
 }
 function showcaseCard(sp) {
   const pool = coverPool(sp);
@@ -1158,9 +1159,10 @@ function openSpecies(n) {
   const others = sp.cards.filter(c => !sp.targets.includes(c));
   const coverNote = cover
     ? `<p class="cover-note">🖼️ Pokédex kapağı: <b>${esc(cover.name)}</b> (${esc(cover.rarity)}). ${pool.length > 1
-        ? `Değiştirmek için ${pool[0].illus ? 'illustration kartlarından' : 'kartlarından'} birinin altındaki <b>Kapak yap</b> butonuna bas.`
-        : ''}${pool[0].illus ? '' : ' Bir illustration kartı bulunca kapak sadece illustration kartlarından seçilir.'}</p>`
-    : '';
+        ? `Değiştirmek için ${sp.mode === 'illus' ? 'illustration kartlarından' : 'kartlarından'} birinin altındaki <b>Kapak yap</b> butonuna bas.` : ''}</p>`
+    : sp.mode === 'illus' && ownedCount
+      ? `<p class="cover-note">🖼️ Pokédex kapağı boş. Bu Pokémon'un illustration kartlarından birini bulunca kapağı o olur.</p>`
+      : '';
   const head = sp.mode === 'illus'
     ? `<h3 style="color:var(--gold)">★ Hedef: illustration kartlarından herhangi biri (${sp.targets.filter(c => own(c.id)).length}/${sp.targets.length} sende)</h3>
        <p class="muted">Bu kartlar paketlerdeki özel illustration slotundan çıkar (Illustration Rare ~1/${Math.round(1 / CFG.ILLUS_RATE)}, Special ~1/${Math.round(1 / CFG.SPECIAL_ILLUS_RATE)} paket).</p>`
